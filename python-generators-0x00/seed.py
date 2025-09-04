@@ -1,18 +1,23 @@
 import mysql.connector
-from mysql.connector import Error
 import csv
 import uuid
+from dotenv import load_dotenv
+import os
 
 
 # ----------------------------
 # Connecting to MySQL Server
 # ----------------------------
+
+# Load environment variables from .env
+load_dotenv()
+
 def connect_db():
     try:
         connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="MySQL@001",
+            host=os.getenv("DB_HOST", "localhost"),
+            user=os.getenv("DB_USER", "root"),
+            password=os.getenv("DB_PASSWORD", ""),
         )
         return connection
     except mysql.connector.Error as err:
@@ -40,10 +45,10 @@ def create_database(connection):
 def connect_to_prodev():
     try:
         connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="MySQL@001",
-            database="ALX_prodev",
+            host=os.getenv("DB_HOST", "localhost"),
+            user=os.getenv("DB_USER", "root"),
+            password=os.getenv("DB_PASSWORD", ""),
+            database=os.getenv("DB_NAME", "ALX_prodev"),
         )
         return connection
     except mysql.connector.Error as err:
