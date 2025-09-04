@@ -29,7 +29,7 @@ def paginate_users(page_size, offset):
     with get_connection() as connection:
         with connection.cursor(dictionary=True) as cursor:
             cursor.execute(
-                "SELECT * FROM user_data ORDER BY user_id DESC LIMIT %s OFFSET %s",
+                "SELECT * FROM user_data LIMIT %s OFFSET %s",
                 (page_size, offset),
             )
             return cursor.fetchall()
