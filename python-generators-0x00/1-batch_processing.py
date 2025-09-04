@@ -3,7 +3,9 @@ from contextlib import contextmanager
 from dotenv import load_dotenv
 import os
 
+
 load_dotenv()
+
 
 @contextmanager
 def get_connection():
@@ -42,3 +44,4 @@ def batch_processing(batch_size):
         filtered_list = list(filtered)
         if filtered_list:
             yield filtered_list
+    return
