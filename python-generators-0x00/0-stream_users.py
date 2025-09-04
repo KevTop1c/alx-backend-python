@@ -8,6 +8,7 @@ load_dotenv()
 
 @contextmanager
 def get_connection():
+    """Context manager to handle MySQL connection with env variables."""
     connection = mysql.connector.connect(
         host=os.getenv("DB_HOST", "localhost"),
         user=os.getenv("DB_USER", "root"),
@@ -21,6 +22,10 @@ def get_connection():
 
 
 def stream_users():
+    """
+    Generator that streams rows from user_data table one by one.
+    Uses a single loop with yield.
+    """
     with get_connection() as connection:
         with connection.cursor(dictionary=True) as cursor:
             cursor.execute("SELECT * FROM user_data")
