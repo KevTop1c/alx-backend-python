@@ -3,8 +3,9 @@ from contextlib import contextmanager
 from dotenv import load_dotenv
 import os
 
-# Load environment variable from .env
+
 load_dotenv()
+
 
 @contextmanager
 def get_connection():
