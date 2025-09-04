@@ -6,6 +6,7 @@ import os
 
 load_dotenv()
 
+
 @contextmanager
 def get_connection():
     """Context manager to handle MySQL connection with env variables."""
