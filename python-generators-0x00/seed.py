@@ -1,8 +1,8 @@
-import mysql.connector
 import csv
 import uuid
-from dotenv import load_dotenv
 import os
+import mysql.connector
+from dotenv import load_dotenv
 
 
 # ----------------------------
@@ -11,6 +11,7 @@ import os
 
 # Load environment variables from .env
 load_dotenv()
+
 
 def connect_db():
     try:
@@ -62,7 +63,8 @@ def connect_to_prodev():
 def create_table(connection):
     cursor = connection.cursor()
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
         CREATE TABLE IF NOT EXISTS user_data (
                 user_id CHAR(36) PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
@@ -70,7 +72,8 @@ def create_table(connection):
                 age DECIMAL NOT NULL,
                 INDEX(email)
             )
-        """)
+        """
+        )
         print("Table user_data created successfully")
     except mysql.connector.Error as err:
         print(f"Failed creating user_data table: {err}")
@@ -91,10 +94,13 @@ def insert_data(connection, data):
         result = cursor.fetchone()
 
         if not result:
-            cursor.execute("""
+            cursor.execute(
+                """
                            INSERT INTO user_data (user_id, name, email, age)
                            VALUES (%s, %s, %s, %s)
-                           """, (str(uuid.uuid4()), name, email, age_value))
+                           """,
+                (str(uuid.uuid4()), name, email, age_value),
+            )
             connection.commit()
             print(f"Inserted: {name} - {email}")
         else:
