@@ -38,6 +38,7 @@ def stream_users_in_batches(batch_size):
 def batch_processing(batch_size):
     """Processes users in batches, yielding only users over age 25."""
     for batch in stream_users_in_batches(batch_size):
-        filtered = [user for user in batch if int(user["age"]) > 25]
-        if filtered:
-            yield filtered
+        filtered = (user for user in batch if int(user["age"]) > 25)
+        filtered_list = list(filtered)
+        if filtered_list:
+            yield filtered_list
