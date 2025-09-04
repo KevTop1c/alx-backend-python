@@ -22,7 +22,7 @@ def connect_db():
         return connection
     except mysql.connector.Error as err:
         print(f"Failed connecting to MySQL database: {err}")
-        return None
+        yield None
 
 
 # ----------------------------
