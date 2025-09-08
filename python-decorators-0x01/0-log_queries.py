@@ -11,7 +11,6 @@ def log_queries(func):
             query = args[0]
         else:
             query = kwargs.get("query")
-
         print(f"[{datetime.now()}] Executing SQL query: {query}")
         return func(*args, **kwargs)
     return wrapper
