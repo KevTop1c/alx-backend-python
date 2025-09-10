@@ -45,13 +45,16 @@ def setup_sample_database():
         conn = sqlite3.connect("users.db")
         cursor = conn.cursor()
 
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL,
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users
+            (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL
+            )
+            """
         )
-    """)
 
         # Insert some sample data
         cursor.execute("""DELETE FROM users""") # Clear existing data
