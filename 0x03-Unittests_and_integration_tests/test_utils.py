@@ -1,11 +1,8 @@
+#!/usr/bin/env python3
 """
 Unit test module for utility functions.
-
-This module contains comprehensive test cases for the utility functions
-defined in the utils module.
 """
 
-#!/usr/bin/env python3
 import unittest
 from unittest.mock import patch, Mock
 from typing import Dict, Mapping, Sequence
@@ -57,11 +54,6 @@ class TestGetJson(unittest.TestCase):
     def test_get_json(self, test_url: str, test_payload: Dict, mock_get: Mock):
         """
         Test that get_json returns the expected result and makes proper HTTP call
-
-        Args:
-            test_url: URL to test
-            test_payload: Expected JSON payload
-            mock_get: Mocked requests.get function
         """
         # Configure the mock to return a response with the test payload
         mock_response = Mock()
@@ -94,10 +86,6 @@ class TestMemoize(unittest.TestCase):
         class TestClass:
             """
             Test class used to demonstrate memoize decorator functionality.
-
-            This inner class provides a simple example with a method that
-            returns a value and a property decorated with @memoize that
-            calls this method.
             """
 
             def __init__(self):
@@ -113,10 +101,6 @@ class TestMemoize(unittest.TestCase):
             def a_property(self):
                 """
                 Memoized property that calls a_method.
-
-                This property is decorated with @memoize, which should
-                cache the result after the first call and return the
-                cached value on subsequent calls.
                 """
                 return self.a_method()
 
