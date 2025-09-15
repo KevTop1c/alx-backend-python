@@ -1,28 +1,40 @@
+"""
+Unit test module for utility functions.
+
+This module contains comprehensive test cases for the utility functions
+defined in the utils module.
+"""
 #!/usr/bin/env python3
 import unittest
 from unittest.mock import patch, Mock
-from parameterized import parameterized
 from typing import Dict, Mapping, Sequence
+from parameterized import parameterized
 from utils import access_nested_map, get_json, memoize
 
 
 class TestAccessNestedMap(unittest.TestCase):
     """Test class for util.access_nested_map function"""
 
-    @parameterized.expand([
-        ({"a": 1}, ("a",), 1),
-        ({"a": {"b": 2}}, ("a",), {"b": 2}),
-        ({"a": {"b": 2}}, ("a", "b"), 2),
-    ])
+    @parameterized.expand(
+        [
+            ({"a": 1}, ("a",), 1),
+            ({"a": {"b": 2}}, ("a",), {"b": 2}),
+            ({"a": {"b": 2}}, ("a", "b"), 2),
+        ]
+    )
     def test_access_nested_map(self, nested_map, path, expected_result):
         """Test that access_nested_map function returns the expected result."""
         self.assertEqual(access_nested_map(nested_map, path), expected_result)
 
-    @parameterized.expand([
-        ({}, ("a",), "a"),
-        ({"a": 1}, ("a", "b"), "b"),
-    ])
-    def test_access_nested_map_exception(self, nested_map: Mapping, path: Sequence, expected_exception_msg: str):
+    @parameterized.expand(
+        [
+            ({}, ("a",), "a"),
+            ({"a": 1}, ("a", "b"), "b"),
+        ]
+    )
+    def test_access_nested_map_exception(
+        self, nested_map: Mapping, path: Sequence, expected_exception_msg: str
+    ):
         """Test that access_nested_map raises KeyError for invalid paths"""
         with self.assertRaises(KeyError) as context:
             access_nested_map(nested_map, path)
@@ -34,11 +46,13 @@ class TestAccessNestedMap(unittest.TestCase):
 class TestGetJson(unittest.TestCase):
     """Test class for util.get_json function"""
 
-    @parameterized.expand([
-        ("http://example.com", {"payload": True}),
-        ("http://holberton.io", {"payload": False}),
-    ])
-    @patch('utils.requests.get')
+    @parameterized.expand(
+        [
+            ("http://example.com", {"payload": True}),
+            ("http://holberton.io", {"payload": False}),
+        ]
+    )
+    @patch("utils.requests.get")
     def test_get_json(self, test_url: str, test_payload: Dict, mock_get: Mock):
         """
         Test that get_json returns the expected result and makes proper HTTP call
@@ -77,19 +91,37 @@ class TestMemoize(unittest.TestCase):
 
         # Define the test class inside the test method
         class TestClass:
+            """
+            Test class used to demonstrate memoize decorator functionality.
+
+            This inner class provides a simple example with a method that
+            returns a value and a property decorated with @memoize that
+            calls this method.
+            """
             def __init__(self):
                 self.value = 42
 
             def a_method(self):
+                """
+                Instance method that returns a fixed value.
+                """
                 return self.value
 
             @memoize
             def a_property(self):
+                """
+                Memoized property that calls a_method.
+
+                This property is decorated with @memoize, which should
+                cache the result after the first call and return the
+                cached value on subsequent calls.
+                """
                 return self.a_method()
 
         test_instance = TestClass()
 
-        with patch.object(test_instance, 'a_method') as mock_a_method:
+        # Mock the a_method to track calls and control return value
+        with patch.object(test_instance, "a_method") as mock_a_method:
             # Configure the mock to return a specific value
             mock_a_method.return_value = 42
 
@@ -104,5 +136,6 @@ class TestMemoize(unittest.TestCase):
             # Assert that a_method was called only once (due to memoization)
             mock_a_method.assert_called_once()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
