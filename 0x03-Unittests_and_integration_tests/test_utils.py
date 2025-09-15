@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Unit test module for utility functions.
-"""
+# Unit test module for utility functions.
 
 import unittest
 from unittest.mock import patch, Mock
@@ -53,7 +51,8 @@ class TestGetJson(unittest.TestCase):
     @patch("utils.requests.get")
     def test_get_json(self, test_url: str, test_payload: Dict, mock_get: Mock):
         """
-        Test that get_json returns the expected result and makes proper HTTP call
+        Test that get_json returns the expected result and makes proper
+        HTTP call
         """
         # Configure the mock to return a response with the test payload
         mock_response = Mock()
@@ -105,7 +104,8 @@ class TestMemoize(unittest.TestCase):
                 return self.a_method()
 
         # Mock the a_method to track calls and control return value
-        with patch.object(TestClass, "a_method", return_value=42) as mock_a_method:
+        with patch.object(TestClass, "a_method",
+                          return_value=42) as mock_a_method:
             test_instance = TestClass()
 
             result1 = test_instance.a_method()
