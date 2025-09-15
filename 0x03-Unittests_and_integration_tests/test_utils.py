@@ -100,8 +100,8 @@ class TestMemoize(unittest.TestCase):
             """
             # def __init__(self):
             #     self.value = 42
-
-            def a_method(self):
+            @staticmethod
+            def a_method():
                 """
                 Instance method that returns a fixed value.
                 """
