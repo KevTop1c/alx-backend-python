@@ -87,14 +87,11 @@ class TestMemoize(unittest.TestCase):
             Test class used to demonstrate memoize decorator functionality.
             """
 
-            def __init__(self):
-                self.value = 42
-
             def a_method(self):
                 """
                 Instance method that returns a fixed value.
                 """
-                return self.value
+                return 42
 
             @memoize
             def a_property(self):
@@ -103,16 +100,18 @@ class TestMemoize(unittest.TestCase):
                 """
                 return self.a_method()
 
-        # Mock the a_method to track calls and control return value
-        with patch.object(TestClass, "a_method",
+        # Mock at class level and create instance within mock context
+        with patch.object(TestClass, 'a_method',
                           return_value=42) as mock_a_method:
             test_instance = TestClass()
 
-            result1 = test_instance.a_method()
-            # result2 = test_instance.a_method()
+            # Access the memoized property twice
+            result1 = test_instance.a_property
+            result2 = test_instance.a_property
 
+            # Both results should be 42
             self.assertEqual(result1, 42)
-            # self.assertEqual(result2, 42)
+            self.assertEqual(result2, 42)
 
             # Assert that a_method was called only once (due to memoization)
             mock_a_method.assert_called_once()
