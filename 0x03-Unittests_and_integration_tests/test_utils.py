@@ -4,6 +4,7 @@ Unit test module for utility functions.
 This module contains comprehensive test cases for the utility functions
 defined in the utils module.
 """
+
 #!/usr/bin/env python3
 import unittest
 from unittest.mock import patch, Mock
@@ -98,6 +99,7 @@ class TestMemoize(unittest.TestCase):
             returns a value and a property decorated with @memoize that
             calls this method.
             """
+
             def __init__(self):
                 self.value = 42
 
@@ -118,9 +120,8 @@ class TestMemoize(unittest.TestCase):
                 """
                 return self.a_method()
 
-
         # Mock the a_method to track calls and control return value
-        with patch.object(TestClass, "a_method", return_value = 42) as mock_a_method:
+        with patch.object(TestClass, "a_method", return_value=42) as mock_a_method:
             test_instance = TestClass()
 
             result1 = test_instance.a_method()
@@ -135,3 +136,4 @@ class TestMemoize(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
