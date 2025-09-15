@@ -98,14 +98,14 @@ class TestMemoize(unittest.TestCase):
             returns a value and a property decorated with @memoize that
             calls this method.
             """
-            def __init__(self):
-                self.value = 42
+            # def __init__(self):
+            #     self.value = 42
 
             def a_method(self):
                 """
                 Instance method that returns a fixed value.
                 """
-                return self.value
+                return 42
 
             @memoize
             def a_property(self):
