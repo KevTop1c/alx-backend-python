@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-# Unit test module for utility functions.
+"""
+Unit test module for utility functions.
+"""
 
 import unittest
 from unittest.mock import patch, Mock
