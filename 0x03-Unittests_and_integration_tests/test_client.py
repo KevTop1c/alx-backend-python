@@ -61,5 +61,43 @@ class TestGithubOrgClient(unittest.TestCase):
             self.assertEqual(result, known_payload["repos_url"])
 
 
+    @patch("client.get_json")
+    def test_public_repos(self, mock_get_json):
+        """Test that public_repos returns the expected list of repos"""
+
+        # Define a test payload with repository data
+        test_repos_payload = [
+            {"name": "repo1", "license": {"key": "mit"}},
+            {"name": "repo2", "license": {"key": "apache-2.0"}},
+            {"name": "repo3", "license": None}
+        ]
+
+        # Mock get_json to return test payload
+        mock_get_json.return_value = test_repos_payload
+
+        # Mock _public_repos_url to return a test URL
+        test_repos_url = "https://api.github.com/repos/test_org/repos"
+
+        # Use patch as a context manager to mock _public_repos_url
+        with patch.object(GithubOrgClient, "_public_repos_url",
+                          new_callable=lambda: test_repos_url) as mock_repos_url:
+            # Create client instance
+            client = GithubOrgClient("test_org")
+
+            # Call public_repos method
+            result = client.public_repos()
+
+            # Test that the list of repos is what is expected (without license filter)
+            expected_repos = ["repo1", "repo2", "repo3"]
+            self.assertEqual(result, expected_repos)
+
+            # Test with license filter
+            repos_with_license = client.public_repos(license="mit")
+            expected_repos_mit = ["repo1"]
+            self.assertEqual(repos_with_license, expected_repos_mit)
+
+            # Test that get_json was called once with test repos url
+            mock_get_json.assert_called_once_with(test_repos_url)
+
 if __name__ == "__main__":
     unittest.main()
