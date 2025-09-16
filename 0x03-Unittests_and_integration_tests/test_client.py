@@ -4,7 +4,7 @@ Unit test for client module
 """
 
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 from parameterized import parameterized
 from client import GithubOrgClient
 
@@ -12,10 +12,12 @@ from client import GithubOrgClient
 class TestGithubOrgClient(unittest.TestCase):
     """Test class for GithubOrgClient"""
 
-    @parameterized.expand([
-        ("google.com",),
-        ("abc",),
-    ])
+    @parameterized.expand(
+        [
+            ("google.com",),
+            ("abc",),
+        ]
+    )
     @patch("client.get_json")
     def test_org(self, org_name, mock_get_json):
         """Test that GithubOrgClient returns the correct value"""
@@ -37,7 +39,6 @@ class TestGithubOrgClient(unittest.TestCase):
         # Assert that the result matches the expected data
         self.assertEqual(result, expected_org_data)
 
-
     def test_public_repos_url(self):
         """Test that _public_repos_url returns the correct value"""
 
@@ -49,8 +50,9 @@ class TestGithubOrgClient(unittest.TestCase):
         }
 
         # Use patch as context manager to mock GithubOrgClient
-        with patch.object(GithubOrgClient, "org",
-                          new_callable=lambda: known_payload) as mock_org:
+        with patch.object(
+            GithubOrgClient, "org", new_callable=lambda: known_payload
+        ) as mock_org:
             # Create client instance
             client = GithubOrgClient("test_org")
 
@@ -68,7 +70,7 @@ class TestGithubOrgClient(unittest.TestCase):
         test_repos_payload = [
             {"name": "repo1", "license": {"key": "mit"}},
             {"name": "repo2", "license": {"key": "apache-2.0"}},
-            {"name": "repo3", "license": None}
+            {"name": "repo3", "license": None},
         ]
 
         # Mock get_json to return test payload
@@ -78,8 +80,9 @@ class TestGithubOrgClient(unittest.TestCase):
         test_repos_url = "https://api.github.com/repos/test_org/repos"
 
         # Use patch as a context manager to mock _public_repos_url
-        with patch.object(GithubOrgClient, "_public_repos_url",
-                          new_callable=lambda: test_repos_url) as mock_repos_url:
+        with patch.object(
+            GithubOrgClient, "_public_repos_url", new_callable=lambda: test_repos_url
+        ) as mock_repos_url:
             # Create client instance
             client = GithubOrgClient("test_org")
 
