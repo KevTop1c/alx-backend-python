@@ -99,5 +99,6 @@ class TestGithubOrgClient(unittest.TestCase):
             # Test that get_json was called once with test repos url
             mock_get_json.assert_called_once_with(test_repos_url)
 
+
 if __name__ == "__main__":
     unittest.main()
