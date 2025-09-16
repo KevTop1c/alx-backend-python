@@ -87,7 +87,7 @@ class TestGithubOrgClient(unittest.TestCase):
             # Call public_repos method
             result = client.public_repos()
 
-            # Test that the list of repos is what is expected (without license filter)
+            # Test that the list of repos is what is expected
             expected_repos = ["repo1", "repo2", "repo3"]
             self.assertEqual(result, expected_repos)
 
