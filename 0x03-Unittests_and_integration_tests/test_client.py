@@ -60,7 +60,6 @@ class TestGithubOrgClient(unittest.TestCase):
             # Assert that the result matches the repos_url from the payload
             self.assertEqual(result, known_payload["repos_url"])
 
-
     @patch("client.get_json")
     def test_public_repos(self, mock_get_json):
         """Test that public_repos returns the expected list of repos"""
