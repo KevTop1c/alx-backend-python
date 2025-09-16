@@ -4,6 +4,7 @@ Unit test for client module
 """
 
 import unittest
+from ast import literal_eval
 from unittest.mock import patch
 from parameterized import parameterized
 from client import GithubOrgClient
@@ -102,6 +103,20 @@ class TestGithubOrgClient(unittest.TestCase):
 
             # Test that get_json was called once with test repos url
             mock_get_json.assert_called_once_with(test_repos_url)
+
+    @parameterized.expand(
+        [
+            ({"license": {"key": "my_license"}}, "my_license", True),
+            ({"license": {"key": "other_license"}}, "my_license", False),
+        ]
+    )
+    def test_has_license(self, repo, license, expected_result):
+        """Test that has_license returns the expected boolean value"""
+        # Call the static method
+        result = GithubOrgClient.has_license(repo, license)
+
+        # Assert that the result matches the expected value
+        self.assertEqual(result, expected_result)
 
 
 if __name__ == "__main__":
