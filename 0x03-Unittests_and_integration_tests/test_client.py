@@ -123,7 +123,6 @@ class TestGithubOrgClient(unittest.TestCase):
     ('org_payload', 'repos_payload', 'expected_repos', 'apache2_repos'),
     TEST_PAYLOAD
 )
-
 class TestIntegrationGithubOrgClient(unittest.TestCase):
     """Integration test class for GithubOrgClient"""
 
