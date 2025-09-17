@@ -199,7 +199,7 @@ class Message(models.Model):
             models.Index(fields=["conversation", "sent_at"]),
             models.Index(fields=["sent_at"]),
         ]
-        constraint = [
+        constraints = [
             models.CheckConstraint(
                 check=models.Q(message_body__isnull=False) & ~models.Q(message_body=''),
                 name="message_body_not_empty"
