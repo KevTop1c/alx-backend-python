@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'django_filters',
 
     # Local apps
-    # 'chats',
+    'chats',
 ]
 
 MIDDLEWARE = [
