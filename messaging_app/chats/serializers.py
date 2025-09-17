@@ -38,6 +38,9 @@ class MessageSerializer(serializers.ModelSerializer):
 
     sender = UserSerializer(read_only=True)
     sender_id = serializers.UUIDField(write_only=True)
+    message_body_text = serializers.CharField(source="message_body", read_only=True)
+    sender_email = serializers.SerializerMethodField()
+    formatted_sent_at = serializers.SerializerMethodField()
 
     class Meta:
         """Message model serializer configuration"""
@@ -49,9 +52,19 @@ class MessageSerializer(serializers.ModelSerializer):
             "sender_id",
             "conversation",
             "message_body",
+            "message_body_text",
+            "formatted_sent_at"
             "sent_at",
         ]
         read_only_fields = ["message_id", "sent_at"]
+
+    def get_sender_email(self, obj):
+        """Get sender's email address."""
+        return obj.sender.email
+
+    def get_formatted_sent_at(self, obj):
+        """Format the sent_at timestamp for display."""
+        return obj.sent_at.strftime('%Y-%m-%d %H:%M:%S') if obj.sent_at else None
 
     def create(self, validated_data):
         """Create a message and validate sender is conversation participant."""
