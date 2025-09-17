@@ -1,10 +1,10 @@
 """Imports for chats/urls.py"""
 
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework import routers
 from .views import ConversationViewSet, MessageViewSet
 
-router = DefaultRouter()
+router = routers.DefaultRouter()
 
 # Register viewsets with the router
 router.register(r"conversations", ConversationViewSet, basename="conversation")
