@@ -1,8 +1,10 @@
 """Imports for ViewSet"""
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
 from .models import Conversation, Message, ConversationParticipant
 from .serializers import ConversationSerializer, MessageSerializer
@@ -14,24 +16,41 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
     permission_classes = [IsAuthenticated]
     serializer_class = ConversationSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["created_at"]
 
     def get_queryset(self):
-        """Return conversations where the current user is a participant."""
+        """Return conversations where the current user is a participant with optional filtering."""
+
         # pylint: disable=no-member
-        return (
-            Conversation.objects.filter(participants__user=self.request.user)
-            .prefetch_related("participants__user", "messages__sender")
-            .distinct()
-        )
+        queryset = Conversation.objects.filter(
+            participants__user=self.request.user
+        ).distinct()
+
+        # Additional filtering based on query parameters
+        created_after = self.request.query_params.get("created_after")
+        if created_after:
+            queryset = queryset.filter(created_at__gte=created_after)
+
+        has_messages = self.request.query_params.get("has_messages")
+        if has_messages:
+            if has_messages.lower() == "true":
+                queryset = queryset.filter(messages__isnull=False)
+            elif has_messages.lower() == "false":
+                queryset = queryset.filter(messages__isnull=True)
+
+        return queryset
 
     def perform_create(self, serializer):
         """Create conversation and add current user a participant."""
         with transaction.atomic():
             conversation = serializer.save()
+
             # Add current user to participants
             # pylint: disable=no-member
             ConversationParticipant.objects.create(
-                conversation=conversation, user=self.request.user
+                conversation=conversation,
+                user=self.request.user,
             )
 
     def create(self, request, *args, **kwargs):
@@ -72,17 +91,6 @@ class ConversationViewSet(viewsets.ModelViewSet):
             message_body=request.data.get("message_body", ""),
         )
 
-        serializer = MessageSerializer(message)
-        serializer.is_valid(raise_exception=True)
-
-        # Create message
-        # pylint: disable=no-member
-        message = Message.objects.create(
-            sender=request.user,
-            conversation=conversation,
-            message_body=serializer.validated_data["message_body"],
-        )
-
         response_serializer = MessageSerializer(message)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -108,15 +116,35 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     permission_classes = [IsAuthenticated]
     serializer_class = MessageSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["conversation", "sent_at", "sender"]
 
     def get_queryset(self):
-        """Return messages in conversations where user is a participant."""
-        return (
-            # pylint: disable=no-member
-            Message.objects.filter(conversation__participants__user=self.request.user)
-            .select_related("sender", "conversation")
-            .order_by("-sent_at")
-        )
+        """Return messages in conversations where user is a participant with filtering."""
+
+        # pylint: disable=no-member
+        queryset = Message.objects.filter(
+            conversation__participants__user=self.request.user
+        ).select_related("sender", "conversation")
+
+        # Additional filtering based on query parameters
+        conversation_id = self.request.query_params.get("conversation")
+        if conversation_id:
+            queryset = queryset.filter(conversation_id=conversation_id)
+
+        sender_id = self.request.query_params.get("sender")
+        if sender_id:
+            queryset = queryset.filter(sender_id=sender_id)
+
+        sent_after = self.request.query_params.get("sent_after")
+        if sent_after:
+            queryset = queryset.filter(sent_at__gte=sent_after)
+
+        sent_before = self.request.query_params.get("sent_before")
+        if sent_before:
+            queryset = queryset.filter(sent_at__lte=sent_before)
+
+        return queryset.order_by("-sent_at")
 
     def perform_create(self, serializer):
         """Set sender to current user and validate conversation participation."""
