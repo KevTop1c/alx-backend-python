@@ -1,6 +1,6 @@
 """Imports for ViewSet"""
 
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -152,7 +152,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         # Verify user is a participant in the conversation
         if not conversation.participants.filter(user=self.request.user).exists():
-            raise serializer.ValidationError(
+            raise serializers.ValidationError(
                 "You are not a participant in this conversation"
             )
 
