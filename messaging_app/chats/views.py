@@ -12,6 +12,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 
 from .models import User, Conversation, Message, MessageReadStatus
+from .permissions import CanManageMessage
 from .serializers import (
     UserSerializer,
     UserSummarySerializer,
@@ -308,7 +309,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     serializer_class = MessageSerializer
     pagination_class = StandardResultsSetPagination
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, CanManageMessage]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ["message_body"]
     filterset_fields = ["message_type", "is_edited"]

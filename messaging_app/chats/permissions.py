@@ -75,3 +75,37 @@ class CanManageConversation(permissions.BasePermission):
             return is_participant
 
         return False
+
+
+class CanManageMessage(permissions.BasePermission):
+    """
+    Only participants of a conversation can send, view, update, or delete messages.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        # Ensure obj is a Message
+        if isinstance(obj, Message):
+            user = request.user
+            conversation = obj.conversation
+
+            # Must be participant of the conversation
+            is_participant = conversation.participants.filter(
+                user_id=user.user_id
+            ).exists()
+
+            if not is_participant:
+                return False
+
+            # If the request is safe (GET, HEAD, OPTIONS) -> allow participants
+            if request.method in permissions.SAFE_METHODS:
+                return True
+
+            # For editing/deleting messages -> only sender can modify their own message
+            if request.method in ["PUT", "PATCH", "DELETE"]:
+                return obj.sender == user
+
+            # For POST (sending messages) → user must be participant
+            if request.method == "POST":
+                return is_participant
+
+        return False
