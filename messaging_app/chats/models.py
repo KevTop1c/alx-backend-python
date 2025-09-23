@@ -1,8 +1,10 @@
 """Imports for creating models"""
+
 import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 
 # Create your models here.
@@ -112,14 +114,43 @@ class Conversation(models.Model):
         auto_now_add=True,
     )
 
+    # Optional conversation title/name
+    title = models.CharField(max_length=255, null=True, blank=True)
+
+    # Track if conversation is active
+    is_active = models.BooleanField(default=True)
+
     class Meta:
-        "Class for defining conversation table name and index"
+        """Conversations table definition"""
+        db_table = "conversations"
+        indexes = [
+            models.Index(fields=["conversation_id"]),
+            models.Index(fields=["created_at"]),
+        ]
+        ordering = ["-created_at"]
 
-        db_table = "conversation"
-        indexes = [models.Index(fields=["created_at"])]
-
+    # pylint: disable=no-member
     def __str__(self):
-        return f"Conversation {self.conversation_id}"
+        if self.title:
+            return f"Conversation: {self.title}"
+        participants_names = ", ".join(
+            [user.get_full_name() for user in self.participants.all()[:3]]
+        )
+        if self.participants.count() > 3:
+            participants_names += f" and {self.participants.count() - 3} others"
+        return f"Conversation between {participants_names}"
+
+    def get_participant_count(self):
+        """Return particpants total count"""
+        return self.participants.count()
+
+    def add_participant(self, user):
+        """Add a user to the conversation."""
+        self.participants.add(user)
+
+    def remove_participant(self, user):
+        """Remove a user from the conversation."""
+        self.participants.remove(user)
 
 
 class ConversationParticipant(models.Model):
@@ -190,21 +221,97 @@ class Message(models.Model):
         auto_now_add=True,
     )
 
+    # Optional: Track if message was edited
+    is_edited = models.BooleanField(default=False)
+    edited_at = models.DateTimeField(null=True, blank=True)
+
+    # Optional: Message type (text, image, file, etc.)
+    class MessageType(models.TextChoices):
+        """List of message types"""
+
+        TEXT = "text", "Text"
+        IMAGE = "image", "Image"
+        FILE = "file", "File"
+        SYSTEM = "system", "System Message"
+
+    message_type = models.CharField(
+        max_length=10,
+        choices=MessageType.choices,
+        default=MessageType.TEXT,
+    )
+
     class Meta:
         """Class for defining message table indexes"""
+
         db_table = "message"
         ordering = ["sent_at"]
         indexes = [
+            models.Index(fields=["sent_at"]),
+            models.Index(fields=["message_id"]),
+            models.Index(fields=["conversation"]),
+            models.Index(fields=["sender"]),
             models.Index(fields=["sender", "sent_at"]),
             models.Index(fields=["conversation", "sent_at"]),
-            models.Index(fields=["sent_at"]),
         ]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(message_body__isnull=False) & ~models.Q(message_body=''),
-                name="message_body_not_empty"
+                check=models.Q(message_body__isnull=False) & ~models.Q(message_body=""),
+                name="message_body_not_empty",
             )
         ]
 
     def __str__(self):
         return f"Message from {self.sender} at {self.sent_at}"
+
+    def save(self, *args, **kwargs):
+        # Ensure sender is a participant in the conversation
+        # pylint: disable=no-member
+        if self.conversation_id and self.sender_id:
+            if not self.conversation.participants.filter(
+                user_id=self.sender_id
+            ).exists():
+                raise ValueError("Sender must be a participant in the conversation")
+        super().save(*args, **kwargs)
+
+    def mark_as_edited(self):
+        """Mark message as edited and update timestamp."""
+        self.is_edited = True
+        self.edited_at = timezone.now()
+        self.save(update_fields=["is_edited", "edited_at"])
+
+
+# Additional model for tracking message read status (optional but useful)
+class MessageReadStatus(models.Model):
+    """
+    Model to track which users have read which messages.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name="read_status",
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="message_reads",
+    )
+
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        """Class for defining message read status table"""
+
+        db_table = "message_read_status"
+        unique_together = ("message", "user")
+        indexes = [
+            models.Index(fields=["message"]),
+            models.Index(fields=["user"]),
+            models.Index(fields=["read_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} read message at {self.read_at}"  # pylint: disable=no-member
