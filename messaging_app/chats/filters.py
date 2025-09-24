@@ -1,3 +1,5 @@
+"""Module import for filtering"""
+
 from datetime import timedelta
 from django.utils import timezone
 from django_filters import rest_framework as filters
@@ -38,6 +40,7 @@ class MessageFilter(filters.FilterSet):
 
     class Meta:
         """MessageFilter definition"""
+
         model = Message
         fields = ["conversation", "sender", "sent_range"]
 

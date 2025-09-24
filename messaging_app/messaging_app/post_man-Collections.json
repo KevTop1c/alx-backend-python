@@ -1,0 +1,420 @@
+{
+  "info": {
+    "_postman_id": "b31af2a4-29f0-45d8-b7ef-fcfacb748f84",
+    "name": "Messaging App - Quick Tests",
+    "description": "Essential tests for conversation creation, messaging, and security",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api" },
+    { "key": "johnToken", "value": "" },
+    { "key": "janeToken", "value": "" },
+    { "key": "bobToken", "value": "" },
+    { "key": "johnUserId", "value": "" },
+    { "key": "janeUserId", "value": "" },
+    { "key": "conversationId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Register John",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    const response = pm.response.json();",
+              "    pm.collectionVariables.set('johnToken', response.access);",
+              "    pm.collectionVariables.set('johnUserId', response.user.user_id);",
+              "    pm.test('✅ John registered successfully', () => {",
+              "        pm.expect(response.user.email).to.eql('john@example.com');",
+              "    });",
+              "} else {",
+              "    pm.test('❌ John registration failed', () => {",
+              "        console.log(pm.response.text());",
+              "        pm.expect.fail('Registration should succeed');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"john@example.com\",\n  \"username\": \"john_doe\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"password\": \"SecurePass123!\",\n  \"password_confirm\": \"SecurePass123!\",\n  \"role\": \"guest\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register/",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "2. Register Jane",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    const response = pm.response.json();",
+              "    pm.collectionVariables.set('janeToken', response.access);",
+              "    pm.collectionVariables.set('janeUserId', response.user.user_id);",
+              "    pm.test('✅ Jane registered successfully', () => {",
+              "        pm.expect(response.user.email).to.eql('jane@example.com');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"jane@example.com\",\n  \"username\": \"jane_smith\",\n  \"first_name\": \"Jane\",\n  \"last_name\": \"Smith\",\n  \"password\": \"SecurePass123!\",\n  \"password_confirm\": \"SecurePass123!\",\n  \"role\": \"guest\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register/",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "3. Login John",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    pm.collectionVariables.set('johnToken', response.access);",
+              "    pm.test('✅ John login successful', () => {",
+              "        pm.expect(response.access).to.be.a('string');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login/",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "4. Create Conversation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    const response = pm.response.json();",
+              "    pm.collectionVariables.set('conversationId', response.conversation_id);",
+              "    pm.test('✅ Conversation created successfully', () => {",
+              "        pm.expect(response.title).to.eql('Project Discussion');",
+              "        pm.expect(response.participants).to.have.length(2);",
+              "    });",
+              "} else {",
+              "    pm.test('❌ Conversation creation failed', () => {",
+              "        console.log('Response:', pm.response.text());",
+              "        pm.expect.fail('Conversation creation should succeed');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{johnToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Project Discussion\",\n  \"participant_ids\": [\"{{janeUserId}}\"]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/conversations/",
+          "host": ["{{baseUrl}}"],
+          "path": ["conversations"]
+        }
+      }
+    },
+    {
+      "name": "5. Send Message (John)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    const response = pm.response.json();",
+              "    pm.test('✅ Message sent successfully', () => {",
+              "        pm.expect(response.message_body).to.include('Hello Jane');",
+              "        pm.expect(response.sender.user_id).to.eql(pm.collectionVariables.get('johnUserId'));",
+              "    });",
+              "} else {",
+              "    pm.test('❌ Message sending failed', () => {",
+              "        console.log('Response:', pm.response.text());",
+              "        pm.expect.fail('Message sending should succeed');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{johnToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"conversation_id\": \"{{conversationId}}\",\n  \"message_body\": \"Hello Jane! How are you doing?\",\n  \"message_type\": \"text\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/messages/",
+          "host": ["{{baseUrl}}"],
+          "path": ["messages"]
+        }
+      }
+    },
+    {
+      "name": "6. Send Reply (Jane)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{janeToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"conversation_id\": \"{{conversationId}}\",\n  \"message_body\": \"Hi John! I'm doing great, thanks for asking!\",\n  \"message_type\": \"text\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/messages/",
+          "host": ["{{baseUrl}}"],
+          "path": ["messages"]
+        }
+      }
+    },
+    {
+      "name": "7. Fetch Conversations (John)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    pm.test('✅ Conversations fetched successfully', () => {",
+              "        pm.expect(response.pagination.count).to.be.at.least(1);",
+              "        pm.expect(response.results).to.be.an('array');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{johnToken}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/conversations/",
+          "host": ["{{baseUrl}}"],
+          "path": ["conversations"]
+        }
+      }
+    },
+    {
+      "name": "8. Fetch Messages with Pagination",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    pm.test('✅ Messages fetched with pagination', () => {",
+              "        pm.expect(response.pagination).to.be.an('object');",
+              "        pm.expect(response.pagination.page_size).to.eql(20);",
+              "        pm.expect(response.results).to.be.an('array');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{johnToken}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/messages/?conversation={{conversationId}}&page_size=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["messages"],
+          "query": [
+            { "key": "conversation", "value": "{{conversationId}}" },
+            { "key": "page_size", "value": "20" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "9. Test Unauthorized Access (No Token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('✅ Unauthorized access blocked', () => {",
+              "    pm.expect(pm.response.code).to.eql(401);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/conversations/",
+          "host": ["{{baseUrl}}"],
+          "path": ["conversations"]
+        }
+      }
+    },
+    {
+      "name": "10. Test Invalid Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('✅ Invalid token rejected', () => {",
+              "    pm.expect(pm.response.code).to.eql(401);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer invalid_token_here" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/conversations/",
+          "host": ["{{baseUrl}}"],
+          "path": ["conversations"]
+        }
+      }
+    },
+    {
+      "name": "11. Register Third User (Bob)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    const response = pm.response.json();",
+              "    pm.collectionVariables.set('bobToken', response.access);",
+              "    pm.test('✅ Bob registered successfully', () => {",
+              "        pm.expect(response.user.email).to.eql('bob@example.com');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"bob@example.com\",\n  \"username\": \"bob_wilson\",\n  \"first_name\": \"Bob\",\n  \"last_name\": \"Wilson\",\n  \"password\": \"SecurePass123!\",\n  \"password_confirm\": \"SecurePass123!\",\n  \"role\": \"guest\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register/",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "12. Test Cross-User Access (Bob tries John's conversation)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('✅ Cross-user access blocked', () => {",
+              "    pm.expect(pm.response.code).to.be.oneOf([403, 404]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{bobToken}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/conversations/{{conversationId}}/",
+          "host": ["{{baseUrl}}"],
+          "path": ["conversations", "{{conversationId}}"]
+        }
+      }
+    },
+    {
+      "name": "13. Test Unauthorized Message Sending",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('✅ Unauthorized message sending blocked', () => {",
+              "    pm.expect(pm.response.code).to.be.oneOf([403, 404]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{bobToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"conversation_id\": \"{{conversationId}}\",\n  \"message_body\": \"This should fail - I'm not a participant\",\n  \"message_type\": \"text\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/messages/",
+          "host": ["{{baseUrl}}"],
+          "path": ["messages"]
+        }
+      }
+    }
+  ]
+}
