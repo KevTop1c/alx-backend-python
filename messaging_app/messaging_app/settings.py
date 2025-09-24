@@ -146,6 +146,8 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
 }
 
+APPEND_SLASH = False
+
 # JWT Settings
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),

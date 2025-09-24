@@ -1,13 +1,16 @@
 """Imports for ViewSet"""
 
-from django.db.models import Q, Prefetch
-from django.core.exceptions import ValidationError
+from django.db.models import Q
+from django.core.exceptions import ValidationError, PermissionDenied
+from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
+from rest_framework.permissions import AllowAny
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 
@@ -23,6 +26,7 @@ from .serializers import (
     MessageSerializer,
     MessageReadStatusSerializer,
     ParticipantActionSerializer,
+    RegisterSerializer,
 )
 
 
@@ -85,6 +89,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# pylint: disable=no-member
 class ConversationViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing conversations.
@@ -100,20 +105,11 @@ class ConversationViewSet(viewsets.ModelViewSet):
     ordering_fields = ["created_at"]
     ordering = ["-created_at"]
 
-    # pylint: disable=no-member
     def get_queryset(self):
         """Return conversations where the user is a participant."""
         return (
             Conversation.objects.filter(participants=self.request.user, is_active=True)
-            .prefetch_related(
-                "participants",
-                Prefetch(
-                    "messages",
-                    queryset=Message.objects.select_related("sender").order_by(
-                        "-sent_at"
-                    )[:10],
-                ),
-            )
+            .prefetch_related("participants")
             .distinct()
         )
 
@@ -129,35 +125,13 @@ class ConversationViewSet(viewsets.ModelViewSet):
         context["request"] = self.request
         return context
 
-    def create(self, request, *args, **kwargs):
-        """
-        Create a new conversation.
-        Automatically adds the current user as a participant.
-        """
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            conversation = serializer.save()
+    def perform_create(self, serializer):
+        """Automatically add current user as participant when creating conversation."""
+        conversation = serializer.save()
+        conversation.participants.add(self.request.user)
 
-            # Return the created conversation with full details
-            response_serializer = ConversationSerializer(
-                conversation, context=self.get_serializer_context()
-            )
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def retrieve(self, request, *args, **kwargs):
-        """
-        Retrieve a specific conversation with all messages.
-        """
-        conversation = self.get_object()
-        serializer = ConversationSerializer(
-            conversation, context=self.get_serializer_context()
-        )
-        return Response(serializer.data)
-
-    # pylint: disable=no-member
     @action(detail=True, methods=["post"])
-    def add_participant(self, request):
+    def add_participant(self, request, _pk=None):
         """
         Add a participant to the conversation.
         Expected payload: {"user_id": "uuid"}
@@ -184,11 +158,12 @@ class ConversationViewSet(viewsets.ModelViewSet):
             )
 
         # Check if user is already a participant
-        if conversation.participants.filter(id=user.id).exists():
+        if conversation.participants.filter(id=user.user_id).exists():
             return Response(
                 {"message": f"{user.get_full_name()} is already in the conversation"},
                 status=status.HTTP_200_OK,
             )
+
         try:
             conversation.add_participant(user)
             return Response(
@@ -197,13 +172,11 @@ class ConversationViewSet(viewsets.ModelViewSet):
             )
         except ValidationError as e:
             return Response(
-                {"error": e.message_dict if hasattr(e, 'message_dict') else str(e)},
+                {"error": e.message_dict if hasattr(e, "message_dict") else str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        # Database-related exceptions
         except IntegrityError as e:
-            if 'unique constraint' in str(e).lower():
+            if "unique constraint" in str(e).lower():
                 return Response(
                     {"error": "User is already a participant in this conversation"},
                     status=status.HTTP_409_CONFLICT,
@@ -214,7 +187,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
             )
 
     @action(detail=True, methods=["post"])
-    def remove_participant(self, request):
+    def remove_participant(self, request, _pk=None):
         """
         Remove a participant from the conversation.
         Expected payload: {"user_id": "uuid"}
@@ -239,7 +212,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         )
 
     @action(detail=True, methods=["post"])
-    def leave_conversation(self, request):
+    def leave_conversation(self, request, _pk=None):
         """
         Allow current user to leave the conversation.
         """
@@ -258,29 +231,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
             {"message": "You have left the conversation"}, status=status.HTTP_200_OK
         )
 
-    @action(detail=True, methods=["get"])
-    def messages(self):
-        """
-        Get all messages for a conversation with pagination.
-        """
-        conversation = self.get_object()
-        messages = conversation.messages.select_related("sender").order_by("-sent_at")
-
-        # Apply pagination
-        page = self.paginate_queryset(messages)
-        if page is not None:
-            serializer = MessageSerializer(
-                page, many=True, context=self.get_serializer_context()
-            )
-            return self.get_paginated_response(serializer.data)
-
-        serializer = MessageSerializer(
-            messages, many=True, context=self.get_serializer_context()
-        )
-        return Response(serializer.data)
-
     @action(detail=True, methods=["post"])
-    def mark_as_read(self, request):
+    def mark_as_read(self, request, _pk=None):
         """
         Mark all messages in conversation as read by current user.
         """
@@ -305,7 +257,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
 class MessageViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for managing messages.
+    ViewSet for managing messages within conversations (nested routing).
     Provides CRUD operations and message-specific actions.
     """
 
@@ -320,41 +272,47 @@ class MessageViewSet(viewsets.ModelViewSet):
     ordering_fields = ["sent_at"]
     ordering = ["-sent_at"]
 
-    # pylint: disable=no-member
     def get_queryset(self):
-        """Return messages from conversations where user is a participant."""
-        user = self.request.user
-        conversation_id = self.request.query_params.get("conversation")
+        """Return messages from the specific conversation where user is a participant."""
+        conversation_id = self.kwargs.get("conversation_pk")
 
-        queryset = Message.objects.filter(
-            conversation__participants=user
-        ).select_related("sender", "conversation")
+        if not conversation_id:
+            return Message.objects.none()
 
-        if conversation_id:
-            queryset = queryset.filter(conversation__conversation_id=conversation_id)
-
-        return queryset
+        return (
+            Message.objects.filter(
+                conversation__conversation_id=conversation_id,
+                conversation__participants=self.request.user,
+                conversation__is_active=True,
+            )
+            .select_related("sender", "conversation")
+            .order_by("-sent_at")
+        )
 
     def get_serializer_context(self):
         """Add request context for serializers."""
         context = super().get_serializer_context()
         context["request"] = self.request
+        context["conversation_id"] = self.kwargs.get("conversation_pk")
         return context
 
-    def create(self, request, *args, **kwargs):
-        """
-        Send a new message to a conversation.
-        """
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            message = serializer.save()
+    def perform_create(self, serializer):
+        """Automatically set conversation and sender when creating message."""
+        conversation_id = self.kwargs.get("conversation_pk")
+        conversation = get_object_or_404(Conversation, conversation_id=conversation_id)
+        if not conversation_id:
+            raise ValidationError({"conversation": "Conversation ID is required."})
 
-            # Return the created message with full details
-            response_serializer = MessageSerializer(
-                message, context=self.get_serializer_context()
-            )
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # Verify user is a participant in the conversation
+        try:
+            conversation = Conversation.objects.get(conversation_id=conversation_id)
+        except Conversation.DoesNotExist as exc:
+            raise NotFound("Conversation not found") from exc
+
+        if not conversation.participants.filter(id=self.request.user.user_id).exists():
+            raise PermissionDenied("You are not a participant in this conversation")
+
+        serializer.save(conversation=conversation, sender=self.request.user)
 
     def update(self, request, *args, **kwargs):
         """
@@ -405,9 +363,8 @@ class MessageViewSet(viewsets.ModelViewSet):
         message.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    # pylint: disable=no-member
     @action(detail=True, methods=["post"])
-    def mark_as_read(self, request):
+    def mark_as_read(self, request, *_args, **_kwarags):
         """
         Mark a specific message as read by current user.
         """
@@ -424,6 +381,77 @@ class MessageViewSet(viewsets.ModelViewSet):
             return Response(
                 {"message": "Message already read"}, status=status.HTTP_200_OK
             )
+
+
+# Additional ViewSet for message read status management
+class MessageReadStatusViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for viewing message read statuses.
+    Read-only operations only.
+    """
+
+    serializer_class = MessageReadStatusSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    # pylint: disable=no-member
+    def get_queryset(self):
+        """Return read statuses for messages in user's conversations."""
+        return MessageReadStatus.objects.filter(
+            message__conversation__participants=self.request.user
+        ).select_related("user", "message")
+
+    @action(detail=False, methods=["get"])
+    def by_message(self, request):
+        """
+        Get read statuses for a specific message.
+        Query parameter: message_id
+        """
+        message_id = request.query_params.get("message_id")
+        if not message_id:
+            return Response(
+                {"error": "message_id parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            message = Message.objects.get(message_id=message_id)
+            # Verify user has access to this message
+            if not message.conversation.participants.filter(
+                user_id=request.user.user_id
+            ).exists():
+                return Response(
+                    {"error": "You do not have access to this message"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            read_statuses = self.get_queryset().filter(message=message)
+            serializer = self.get_serializer(read_statuses, many=True)
+            return Response(serializer.data)
+
+        except Message.DoesNotExist:
+            return Response(
+                {"error": "Message not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class FlatMessageViewSet(viewsets.ModelViewSet):
+    """
+    Flat ViewSet for messages across all conversations (non-nested).
+    Useful for search and global message operations.
+    """
+
+    serializer_class = MessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ["message_body"]
+    filterset_class = MessageFilter
+    pagination_class = MessagePagination
+
+    def get_queryset(self):
+        """Return messages from all conversations where user is a participant."""
+        return Message.objects.filter(
+            conversation__participants=self.request.user, conversation__is_active=True
+        ).select_related("sender", "conversation")
 
     @action(detail=False, methods=["get"])
     def search(self, request):
@@ -477,52 +505,24 @@ class MessageViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-# Additional ViewSet for message read status management
-class MessageReadStatusViewSet(viewsets.ReadOnlyModelViewSet):
+class RegistrationView(generics.CreateAPIView):
     """
-    ViewSet for viewing message read statuses.
-    Read-only operations only.
+    API endpoint to register a new user.
     """
 
-    serializer_class = MessageReadStatusSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    queryset = User.objects.all()
+    serializer_class = RegisterSerializer
+    permission_classes = [AllowAny]
 
-    # pylint: disable=no-member
-    def get_queryset(self):
-        """Return read statuses for messages in user's conversations."""
-        return MessageReadStatus.objects.filter(
-            message__conversation__participants=self.request.user
-        ).select_related("user", "message")
-
-    @action(detail=False, methods=["get"])
-    def by_message(self, request):
-        """
-        Get read statuses for a specific message.
-        Query parameter: message_id
-        """
-        message_id = request.query_params.get("message_id")
-        if not message_id:
-            return Response(
-                {"error": "message_id parameter is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            message = Message.objects.get(message_id=message_id)
-            # Verify user has access to this message
-            if not message.conversation.participants.filter(
-                user_id=request.user.user_id
-            ).exists():
-                return Response(
-                    {"error": "You do not have access to this message"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-
-            read_statuses = self.get_queryset().filter(message=message)
-            serializer = self.get_serializer(read_statuses, many=True)
-            return Response(serializer.data)
-
-        except Message.DoesNotExist:
-            return Response(
-                {"error": "Message not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(
+            {
+                "message": "User registered successfully",
+                "user": serializer.data,
+                "user_id": user.user_id,
+            },
+            status=status.HTTP_201_CREATED,
+        )
