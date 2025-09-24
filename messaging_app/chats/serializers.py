@@ -131,6 +131,7 @@ class MessageSerializer(serializers.ModelSerializer):
             "conversation_id",
             "message_body",
             "message_type",
+            "message_body_text",
             "sent_at",
             "is_edited",
             "edited_at",
@@ -592,3 +593,22 @@ class ParticipantActionSerializer(serializers.Serializer):
         raise NotImplementedError(
             "Update method is not used in ParticipantActionSerializer."
         )
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    """Serializer for registering new users"""
+    password = serializers.CharField(write_only=True, min_length=8)
+
+    class Meta:
+        """Registration serializer configuration"""
+        model = User
+        fields = ("user_id", "email", "password", "first_name", "last_name")
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            email=validated_data["email"],
+            password=validated_data["password"],
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", ""),
+        )
+        return user
