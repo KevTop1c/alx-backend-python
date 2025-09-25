@@ -529,9 +529,12 @@ class RegistrationView(generics.CreateAPIView):
             status=status.HTTP_201_CREATED,
         )
 
+
 @csrf_exempt
 def test_chat_endpoint(request):
     """Test endpoint for rate limiting middleware"""
-    if request.method == 'POST':
-        return JsonResponse({"status": "Message received", "message": request.POST.get('message', '')})
+    if request.method == "POST":
+        return JsonResponse(
+            {"status": "Message received", "message": request.POST.get("message", "")}
+        )
     return JsonResponse({"error": "POST required"})

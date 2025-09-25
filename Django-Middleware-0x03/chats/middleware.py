@@ -4,6 +4,8 @@ import datetime
 import os
 import logging
 import time
+import re
+
 from collections import defaultdict
 from django.conf import settings
 from django.http import HttpResponseForbidden, JsonResponse
@@ -30,11 +32,11 @@ class RequestLoggingMiddleware:
             self.log_file = os.path.join(self.log_dir, "requests.log")
 
             # Tests if we can write to the file
-            with open(self.log_file, "a"):
+            with open(self.log_file, "a", encoding="utf-8"):
                 pass
 
-        except Exception as e:
-            logger.error(f"Failed to setup logging: {e}")
+        except (OSError, PermissionError) as e:
+            logger.error("Failed to setup logging: %s", e)
 
     def __call__(self, request):
         try:
@@ -53,8 +55,8 @@ class RequestLoggingMiddleware:
             with open(self.log_file, "a", encoding="utf-8") as file:
                 file.write(log_entry)
 
-        except Exception as e:
-            logger.error(f"Requesting logging file failed: {e}")
+        except (OSError, PermissionError) as e:
+            logger.error("Requesting logging file failed: %s", e)
 
         # Process the request
         response = self.get_response(request)
@@ -136,11 +138,14 @@ class OffensiveLanguageMiddleware:
             current_count = len(self.request_history.get(client_ip, []))
 
             logger.info(
-                f"IP {client_ip} - {current_count}/{self.message_limit} messages in current window"
+                "IP %s - %d/%d messages in current window",
+                client_ip,
+                current_count,
+                self.message_limit,
             )
 
             if self.is_rate_limit_exceeded(client_ip):
-                logger.warning(f"Rate limit exceeded for IP {client_ip}")
+                logger.warning("Rate limit exceeded for IP %s", client_ip)
                 return JsonResponse(
                     {
                         "error": "Rate limit exceeded",
@@ -153,7 +158,7 @@ class OffensiveLanguageMiddleware:
 
             self.request_history[client_ip].append(current_time)
             logger.info(
-                f"Message allowed for IP {client_ip}. Count {current_count + 1}"
+                "Message allowed for IP %s. Count %d", client_ip, current_count + 1
             )
 
         response = self.get_response(request)
@@ -190,3 +195,97 @@ class OffensiveLanguageMiddleware:
     def is_rate_limit_exceeded(self, ip_address):
         """Check if rate limit is exceeded"""
         return len(self.request_history.get(ip_address, [])) >= self.message_limit
+
+
+class RolePermissionMiddleware:
+    """
+    Middleware that checks user's role before allowing access to specific actions
+    Allows access only to admin and moderator roles for protected endpoints
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        # Define protected endpoints and required roles
+        self.protected_endpoints = [
+            (r"^/api/admin/.*", ["admin", "moderator"]),
+            (r"^/api/users/.*", ["admin"]),
+            (r"^/api/moderation/.*", ["admin", "moderator"]),
+            (r"^/api/settings/.*", ["admin"]),
+            (r"^/api/reports/.*", ["admin", "moderator"]),
+            (r"^/admin/.*", ["admin"]),
+            (r"^/api/delete/.*", ["admin", "moderator"]),
+            (r"^/api/ban/.*", ["admin", "moderator"]),
+        ]
+
+    def __call__(self, request):
+        required_roles = self.get_required_roles(request.path)
+
+        if required_roles:
+            return self.check_permission(request, required_roles)
+
+        response = self.get_response(request)
+        return response
+
+    def get_required_roles(self, path):
+        """Check if path matches any protected pattern and return required roles"""
+
+        for pattern, roles in self.protected_endpoints:
+            if re.match(pattern, path):
+                return roles
+        return None
+
+    def check_permission(self, request, required_roles):
+        """Check if user has permission to access the resource"""
+
+        # Check authentication
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {
+                    "error": "Authentication required",
+                    "message": "Please log in to access this resource",
+                },
+                status=403,
+            )
+
+        # Check role permission
+        if not self.has_required_role(request.user, required_roles):
+            user_role = getattr(request.user, "role", "No role assigned")
+            return JsonResponse(
+                {
+                    "error": "Insufficient permissions",
+                    "message": f"Access denied. Required roles: {', '.join(required_roles)}",
+                    "your_role": user_role,
+                },
+                status=403,
+            )
+
+        # Permission granted, continue with request
+        response = self.get_response(request)
+        return response
+
+    def has_required_role(self, user, required_roles):
+        """
+        Check if user has any of the required roles
+        Supports multiple role checking methods
+        """
+        # Convert required roles to lowercase for comparison
+        required_roles_lower = [role.lower() for role in required_roles]
+
+        # Method 1: Check custom role field
+        if hasattr(user, "role") and user.role:
+            return user.role.lower() in required_roles_lower
+
+        # Method 2: Check Django groups
+        if hasattr(user, "groups"):
+            user_groups = [group.name.lower() for group in user.groups.all()]
+            if any(group in required_roles_lower for group in user_groups):
+                return True
+
+        # Method 3: Check Django staff/superuser status
+        if "admin" in required_roles_lower and (user.is_staff or user.is_superuser):
+            return True
+
+        if "moderator" in required_roles_lower and user.is_staff:
+            return True
+
+        return False
