@@ -197,7 +197,7 @@ class OffensiveLanguageMiddleware:
         return len(self.request_history.get(ip_address, [])) >= self.message_limit
 
 
-class RolePermissionMiddleware:
+class RolepermissionMiddleware:
     """
     Middleware that checks user's role before allowing access to specific actions
     Allows access only to admin and moderator roles for protected endpoints
