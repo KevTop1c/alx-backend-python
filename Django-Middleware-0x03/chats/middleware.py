@@ -25,17 +25,18 @@ class RequestLoggingMiddleware:
             if not os.path.exists(self.log_dir):
                 os.makedirs(self.log_dir)
 
-                self.log_file = os.path.join(self.log_dir, "requests.log")
+            self.log_file = os.path.join(self.log_dir, "requests.log")
 
-                # Tests if we can write to the file
-                with open(self.log_file, "a"):
-                    pass
+            # Tests if we can write to the file
+            with open(self.log_file, "a"):
+                pass
+
         except Exception as e:
             logger.error(f"Failed to setup logging: {e}")
 
-    def __call__(self, request, *args, **kwds):
+    def __call__(self, request):
         try:
-            user = "Anonymous"
+            user = self.get_user_from_request(request)
             if hasattr(request, "user") and request.user.is_authenticated:
                 user = request.user.username
             elif hasattr(request, "user") and request.user.username:
@@ -58,15 +59,36 @@ class RequestLoggingMiddleware:
 
         return response
 
+    def get_user_from_request(self, request):
+        """Safely extract user information from request"""
+        # Check if request has user attribute
+        if not hasattr(request, 'user'):
+            return "NoUserAttribute"
+        
+        # Check if user is authenticated
+        if hasattr(request.user, 'is_authenticated'):
+            if request.user.is_authenticated:
+                return request.user.username or "AuthenticatedNoUsername"
+        
+        # Check if it's an anonymous user
+        if hasattr(request.user, 'username') and request.user.username:
+            return request.user.username
+        
+        # Final fallbacks
+        if str(request.user) != "AnonymousUser":
+            return str(request.user)
+        
+        return "Anonymous"
+
 
 class RestrictAccessByTimeMiddleware:
     """Custom access restriction middleware"""
 
     def __init__(self, get_response):
         self.get_response = get_response
-        # Configurable restricted hours: 9PM (21:00) and 6PM (18:00)
+        # Configurable restricted hours: 9PM (21:00) and 6AM (6:00)
         self.start_restriction = datetime.time(21, 0)
-        self.end_restriction = datetime.time(18, 0)
+        self.end_restriction = datetime.time(6, 0)
 
     def __call__(self, request, *args, **kwds):
         # Get current server time
@@ -76,7 +98,7 @@ class RestrictAccessByTimeMiddleware:
         if self.is_restricted_time(current_time):
             return HttpResponseForbidden(
                 f"Access denied: The messaging service is available between "
-                f"6:00 PM and 9:00 PM. Current time: {current_time.strftime("%I:%M %p")}"
+                f"6:00 AM and 9:00 PM. Current time: {current_time.strftime("%I:%M %p")}"
             )
 
         # If outside restricted time, process normally
@@ -85,10 +107,7 @@ class RestrictAccessByTimeMiddleware:
 
     def is_restricted_time(self, current_time):
         """
-        Check if current time is within restricted hours (9 PM to 6 PM)
-        Since 9 PM > 6 PM, this covers:
-        - From 9 PM to midnight (21:00-23:59)
-        - From midnight to 6 PM (00:00-18:00)
+        Check if current time is within restricted hours (9 PM to 6 AM)
         """
         return (current_time >= self.start_restriction) or (
             current_time <= self.end_restriction
