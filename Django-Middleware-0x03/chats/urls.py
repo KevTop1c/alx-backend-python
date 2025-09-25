@@ -10,6 +10,7 @@ from .views import (
     MessageReadStatusViewSet,
     FlatMessageViewSet,
     RegistrationView,
+    test_chat_endpoint,
 )
 # from .auth import register, login_view, logout_view, change_password, verify_token
 
@@ -34,6 +35,7 @@ urlpatterns = [
     path("auth/register/", RegistrationView.as_view(), name="register"),
     path("auth/login/", TokenObtainPairView.as_view(), name="login"),
     path("auth/verify-token/", TokenRefreshView.as_view(), name="verify-token"),
+    path('api/messages/', test_chat_endpoint, name='chat-messages'),
     # path("auth/register/", register, name="register"),
     # path("auth/login/", login_view, name="login"),
     # path("auth/logout/", logout_view, name="logout"),

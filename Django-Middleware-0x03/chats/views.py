@@ -4,6 +4,8 @@ from django.db.models import Q
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status, permissions, generics
@@ -526,3 +528,10 @@ class RegistrationView(generics.CreateAPIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+@csrf_exempt
+def test_chat_endpoint(request):
+    """Test endpoint for rate limiting middleware"""
+    if request.method == 'POST':
+        return JsonResponse({"status": "Message received", "message": request.POST.get('message', '')})
+    return JsonResponse({"error": "POST required"})
