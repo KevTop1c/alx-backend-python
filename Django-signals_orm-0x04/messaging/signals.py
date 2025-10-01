@@ -1,6 +1,6 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from .models import Message, Notification
+from .models import Message, Notification, MessageHistory
 
 
 # pylint: disable=unused-argument
@@ -29,3 +29,26 @@ def create_message_notification(sender, instance, created, **kwargs):
 
         # Optional: Log the notification creation
         print(f"Notification created for {instance.receiver.username}")
+
+
+@receiver(pre_save, sender=Message)
+def log_message_edit(sender, instance, **kwargs):
+    """
+    Signal handler that logs messages.
+    """
+    if not instance.pk:
+        # New message being created (skip logging)
+        return
+
+    try:
+        old_message = Message.objects.get(pk=instance.pk)
+    except Message.DoesNotExist:
+        return
+
+    if old_message.content != instance.content:
+        # Save old content to history
+        MessageHistory.objects.create(
+            message=old_message, old_content=old_message.content
+        )
+        # Mark the message as edited
+        instance.edited = True
