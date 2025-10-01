@@ -267,12 +267,12 @@ class MessageViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
     permission_classes = [permissions.IsAuthenticated, CanManageMessage]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ["message_body"]
+    search_fields = ["content"]
     filterset_fields = ["message_type", "is_edited"]
     filterset_class = MessageFilter
     pagination_class = MessagePagination
-    ordering_fields = ["sent_at"]
-    ordering = ["-sent_at"]
+    ordering_fields = ["timestamp"]
+    ordering = ["-timestamp"]
 
     def get_queryset(self):
         """Return messages from the specific conversation where user is a participant."""
@@ -288,7 +288,7 @@ class MessageViewSet(viewsets.ModelViewSet):
                 conversation__is_active=True,
             )
             .select_related("sender", "conversation")
-            .order_by("-sent_at")
+            .order_by("-timestamp")
         )
 
     def get_serializer_context(self):
@@ -330,7 +330,7 @@ class MessageViewSet(viewsets.ModelViewSet):
             )
 
         # Only allow editing message body and type
-        allowed_fields = ["message_body", "message_type"]
+        allowed_fields = ["content", "message_type"]
         filtered_data = {
             key: value for key, value in request.data.items() if key in allowed_fields
         }
@@ -445,7 +445,7 @@ class FlatMessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ["message_body"]
+    search_fields = ["content"]
     filterset_class = MessageFilter
     pagination_class = MessagePagination
 

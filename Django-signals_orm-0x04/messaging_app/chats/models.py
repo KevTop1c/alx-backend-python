@@ -243,6 +243,12 @@ class Message(models.Model):
         db_index=True,
     )
 
+    receiver = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="received_messages",
+    )
+
     # Foreign key to Conversation model
     conversation = models.ForeignKey(
         Conversation,
@@ -253,10 +259,10 @@ class Message(models.Model):
     )
 
     # Message content
-    message_body = models.TextField(null=False, blank=False)
+    content = models.TextField(null=False, blank=False)
 
     # Timestamp for when message was sent
-    sent_at = models.DateTimeField(
+    timestamp = models.DateTimeField(
         auto_now_add=True,
     )
 
@@ -283,24 +289,24 @@ class Message(models.Model):
         """Class for defining message table indexes"""
 
         db_table = "message"
-        ordering = ["sent_at"]
+        ordering = ["-timestamp"]
         indexes = [
-            models.Index(fields=["sent_at"]),
+            models.Index(fields=["timestamp"]),
             models.Index(fields=["message_id"]),
             models.Index(fields=["conversation"]),
             models.Index(fields=["sender"]),
-            models.Index(fields=["sender", "sent_at"]),
-            models.Index(fields=["conversation", "sent_at"]),
+            models.Index(fields=["sender", "timestamp"]),
+            models.Index(fields=["conversation", "timestamp"]),
         ]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(message_body__isnull=False) & ~models.Q(message_body=""),
+                check=models.Q(content__isnull=False) & ~models.Q(content=""),
                 name="message_body_not_empty",
             )
         ]
 
     def __str__(self):
-        return f"Message from {self.sender} at {self.sent_at}"
+        return f"Message from {self.sender} at {self.timestamp}"
 
     def save(self, *args, **kwargs):
         # Ensure sender is a participant in the conversation
@@ -398,6 +404,7 @@ class Notification(models.Model):
 
     class Meta:
         """Notification model definition"""
+
         db_table = "notification"
         ordering = ["-created_at"]
         indexes = [

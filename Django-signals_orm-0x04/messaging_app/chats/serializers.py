@@ -116,7 +116,7 @@ class MessageSerializer(serializers.ModelSerializer):
     sender = UserSummarySerializer(read_only=True)
     sender_id = serializers.UUIDField(write_only=True, required=False)
     conversation_id = serializers.UUIDField(write_only=True, required=False)
-    message_body_text = serializers.CharField(source="message_body", read_only=True)
+    message_body_text = serializers.CharField(source="content", read_only=True)
     is_own_message = serializers.SerializerMethodField()
     time_since_sent = serializers.SerializerMethodField()
     formatted_sent_at = serializers.SerializerMethodField()
@@ -131,17 +131,17 @@ class MessageSerializer(serializers.ModelSerializer):
             "sender_id",
             "conversation",
             "conversation_id",
-            "message_body",
+            "content",
             "message_type",
             "message_body_text",
-            "sent_at",
+            "timestamp",
             "is_edited",
             "edited_at",
             "is_own_message",
             "time_since_sent",
             "formatted_sent_at",
         ]
-        read_only_fields = ["message_id", "sent_at", "edited_at", "conversation"]
+        read_only_fields = ["message_id", "timestamp", "edited_at", "conversation"]
 
     def get_is_own_message(self, obj):
         """Check if the message belongs to the current user."""
@@ -153,7 +153,7 @@ class MessageSerializer(serializers.ModelSerializer):
     def get_time_since_sent(self, obj):
         """Return human-readable time since message was sent."""
         now = timezone.now()
-        diff = now - obj.sent_at
+        diff = now - obj.timestamp
 
         if diff.days > 0:
             return f"{diff.days} days ago"
@@ -175,12 +175,12 @@ class MessageSerializer(serializers.ModelSerializer):
             attrs["sender_id"] = request.user.user_id
 
         # Validate message body is not empty
-        message_body = attrs.get("message_body", "").strip()
-        if not message_body:
+        content = attrs.get("content", "").strip()
+        if not content:
             raise serializers.ValidationError(
-                {"message_body": "Message body cannot be empty."}
+                {"content": "Message body cannot be empty."}
             )
-        attrs["message_body"] = message_body
+        attrs["content"] = content
 
         return attrs
 
@@ -189,8 +189,8 @@ class MessageSerializer(serializers.ModelSerializer):
         return obj.sender.email
 
     def get_formatted_sent_at(self, obj):
-        """Format the sent_at timestamp for display."""
-        return obj.sent_at.strftime("%Y-%m-%d %H:%M:%S") if obj.sent_at else None
+        """Format the timestamp timestamp for display."""
+        return obj.timestamp.strftime("%Y-%m-%d %H:%M:%S") if obj.timestamp else None
 
     def create(self, validated_data):
         """Create a new message."""
@@ -237,15 +237,15 @@ class MessageSummarySerializer(serializers.ModelSerializer):
             "sender_name",
             "message_preview",
             "message_type",
-            "sent_at",
+            "timestamp",
         ]
-        read_only_fields = ["message_id", "sent_at"]
+        read_only_fields = ["message_id", "timestamp"]
 
     def get_message_preview(self, obj):
         """Return a truncated version of the message body."""
-        if len(obj.message_body) > 100:
-            return obj.message_body[:100] + "..."
-        return obj.message_body
+        if len(obj.content) > 100:
+            return obj.content[:100] + "..."
+        return obj.content
 
 
 class ConversationParticipantSerializer(serializers.ModelSerializer):
@@ -296,7 +296,7 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     def get_latest_message(self, obj):
         """Get the most recent message in the conversation."""
-        latest_message = obj.messages.order_by("-sent_at").first()
+        latest_message = obj.messages.order_by("-timestamp").first()
         if latest_message:
             return MessageSummarySerializer(latest_message).data
         return None
@@ -398,13 +398,13 @@ class ConversationSummarySerializer(serializers.ModelSerializer):
 
     def get_latest_message(self, obj):
         """Return the latest message"""
-        latest_message = obj.messages.order_by("-sent_at").first()
+        latest_message = obj.messages.order_by("-timestamp").first()
         if latest_message:
             return {
-                "message_body": latest_message.message_body[:50]
-                + ("..." if len(latest_message.message_body) > 50 else ""),
+                "content": latest_message.content[:50]
+                + ("..." if len(latest_message.content) > 50 else ""),
                 "sender_name": latest_message.sender.get_full_name(),
-                "sent_at": latest_message.sent_at,
+                "timestamp": latest_message.timestamp,
             }
         return None
 
