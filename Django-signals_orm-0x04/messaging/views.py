@@ -85,13 +85,29 @@ class MessageViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def unread(self, request):
         """Get all unread messages for the current user using custom manager"""
-        messages = Message.unread.for_user(request.user)
+        # Use the custom manager's method
+        qs = Message.unread.unread_for_user(request.user)
 
-        serializer = self.get_serializer(messages, many=True)
-        return Response({
-            "count": messages.count(),
-            "messages": serializer.data
-        })
+        # Optimize to retrieve only the fields the view/serializer actually needs.
+        # Use FK_id fields (sender_id/receiver_id) instead of sender__username in .only
+        qs = qs.only(
+            "id",
+            "content",
+            "timestamp",
+            "is_read",
+            "sender_id",
+            "receiver_id",
+            "parent_message_id",
+        ).order_by("-timestamp")
+
+        # pagination + response (same structure as your other actions)
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response({"count": qs.count(), "messages": serializer.data})
 
     @action(detail=True, methods=["post"])
     def mark_as_read(self, request, pk=None):

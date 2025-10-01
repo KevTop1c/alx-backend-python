@@ -1,23 +1,9 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from .managers import UnreadMessagesManager
 
 User = settings.AUTH_USER_MODEL
-
-
-class UnreadMessagesManager(models.Manager):
-    def for_user(self, user):
-        """
-        Return unread messages for a specific user, optimized with .only().
-        """
-        return (
-            self.get_queryset()
-            .filter(receiver=user, is_read=False)
-            .select_related("sender", "receiver")  # optimize joins
-            .only(
-                "id", "sender__username", "receiver__username", "content", "timestamp"
-            )  # load only required fields
-        )
 
 
 # pylint: disable=no-member
