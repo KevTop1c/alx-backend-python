@@ -1,3 +1,5 @@
+"""Module imports for messageing.admin"""
+
 from django.contrib import admin
 from .models import Message, Notification
 

@@ -1,3 +1,5 @@
+"""Module imports for messaging.models"""
+
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -55,6 +57,7 @@ class Message(models.Model):
     unread = UnreadMessagesManager()
 
     class Meta:
+        """Meta class"""
         ordering = ["-timestamp"]
         indexes = [
             models.Index(fields=["receiver", "-timestamp"]),
@@ -89,6 +92,7 @@ class MessageHistory(models.Model):
     )
 
     class Meta:
+        """Meta class"""
         db_table = "message_history"
         ordering = ["-edited_at"]
         indexes = [
@@ -143,6 +147,7 @@ class Notification(models.Model):
     )
 
     class Meta:
+        """Meta class"""
         ordering = ["-timestamp"]
         indexes = [
             models.Index(fields=["user", "-timestamp"]),

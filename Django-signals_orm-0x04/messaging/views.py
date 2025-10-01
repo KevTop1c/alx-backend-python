@@ -1,3 +1,5 @@
+"""Module imports for messaging.views"""
+
 from rest_framework import viewsets, status, filters
 from rest_framework.views import APIView
 from rest_framework.decorators import action
@@ -5,6 +7,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from django.db.models import Q
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django.contrib.auth.models import User
 from .models import Message, Notification
 from .serializers import (
@@ -156,6 +160,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(messages, many=True)
         return Response(serializer.data)
 
+    @method_decorator(cache_page(60))
     @action(detail=False, methods=["get"])
     def conversations(self, request):
         """Get list of all conversations with message counts"""
@@ -290,9 +295,11 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class DeleteUserView(APIView):
+    """Returns api view of deletion action"""
     permission_classes = [IsAuthenticated]
 
     def delete_user(self, request):
+        """Deletes user and associated messages"""
         user = request.user
         user.delete()
         return Response(

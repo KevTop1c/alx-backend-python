@@ -1,3 +1,5 @@
+"""Module imports for messaging.serializers"""
+
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Message, Notification, MessageHistory
@@ -8,12 +10,14 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model"""
 
     class Meta:
+        """Meta Class"""
         model = User
         fields = ["id", "username", "email", "first_name", "last_name"]
         read_only_fields = ["id"]
 
 
 class RecursiveField(serializers.Serializer):
+    """Return thread of messages"""
     def to_representation(self, instance):
         serializer = self.parent.parent.__class__(instance, context=self.context)
         return serializer.data
@@ -39,6 +43,7 @@ class MessageSerializer(serializers.ModelSerializer):
     replies = RecursiveField(many=True, read_only=True)
 
     class Meta:
+        """Meta class"""
         model = Message
         fields = [
             "id",
@@ -80,6 +85,7 @@ class MessageCreateSerializer(serializers.ModelSerializer):
     """Simplified serializer for creating messages"""
 
     class Meta:
+        """Meta class"""
         model = Message
         fields = ["receiver", "content", "parent_message"]
         extra_kwargs = {"parent_message": {"required": False, "allow_null": True}}
@@ -111,6 +117,7 @@ class NotificationSerializer(serializers.ModelSerializer):
     message_details = MessageSerializer(source="message", read_only=True)
 
     class Meta:
+        """Meta class"""
         model = Notification
         fields = [
             "id",
@@ -138,6 +145,7 @@ class NotificationUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating notification read status"""
 
     class Meta:
+        """Meta class"""
         model = Notification
         fields = ["is_read"]
 
@@ -163,5 +171,6 @@ class MessageHistorySerializer(serializers.ModelSerializer):
     """Serializer for message history"""
 
     class Meta:
+        """Meta class"""
         model = MessageHistory
         fields = ["old_content", "edited_at"]
