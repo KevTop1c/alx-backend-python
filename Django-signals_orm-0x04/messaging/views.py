@@ -1,7 +1,9 @@
 from rest_framework import viewsets, status, filters
+from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
 from django.db.models import Q
 from django.contrib.auth.models import User
 from .models import Message, Notification
@@ -266,3 +268,15 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         """Get current user details"""
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
+
+
+class DeleteUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+        user.delete()
+        return Response(
+            {"detail": "User account deleted successfully."},
+            status=status.HTTP_204_NO_CONTENT,
+        )

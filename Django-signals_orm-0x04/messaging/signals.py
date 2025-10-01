@@ -1,7 +1,10 @@
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
+from django.contrib.auth import get_user_model
 from .models import Message, Notification, MessageHistory
 
+
+User = get_user_model()
 
 # pylint: disable=unused-argument
 # pylint: disable=no-member
@@ -52,3 +55,20 @@ def log_message_edit(sender, instance, **kwargs):
         )
         # Mark the message as edited
         instance.edited = True
+
+@receiver(post_delete, sender=User)
+def cleanup_related_data(sender, instance, **kwargs):
+    """
+    After a User is deleted, ensure all related objects are cleaned up.
+    CASCADE will handle most of it, but this ensures no leftovers.
+    """
+    # Delete messages where user was sender or receiver (CASCADE covers this, but explicit is safer)
+    Message.objects.filter(sender=instance).delete()
+    Message.objects.filter(receiver=instance).delete()
+
+    # Delete notifications for this user
+    Notification.objects.filter(user=instance).delete()
+
+    # Delete message histories tied to messages from this user (CASCADE covers this too)
+    MessageHistory.objects.filter(message__sender=instance).delete()
+    MessageHistory.objects.filter(message__receiver=instance).delete()
