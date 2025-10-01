@@ -273,7 +273,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 class DeleteUserView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def delete(self, request):
+    def delete_user(self, request):
         user = request.user
         user.delete()
         return Response(
