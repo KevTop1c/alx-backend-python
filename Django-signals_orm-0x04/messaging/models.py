@@ -40,6 +40,13 @@ class Message(models.Model):
         default="text",
     )
     edited = models.BooleanField(default=False)
+    parent_message = models.ForeignKey(
+        "self",
+        related_name="replies",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         ordering = ["-timestamp"]

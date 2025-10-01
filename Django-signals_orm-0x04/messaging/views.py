@@ -32,8 +32,10 @@ class MessageViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Return messages where user is sender or receiver"""
         user = self.request.user
-        return Message.objects.filter(Q(sender=user) | Q(receiver=user)).select_related(
-            "sender", "receiver"
+        return (
+            Message.objects.filter(Q(sender=user) | Q(receiver=user))
+            .select_related("sender", "receiver", "parent_message")
+            .prefetch_related("replies")
         )
 
     def get_serializer_class(self):
@@ -123,9 +125,11 @@ class MessageViewSet(viewsets.ModelViewSet):
         messages = (
             Message.objects.filter(
                 Q(sender=request.user, receiver=other_user)
-                | Q(sender=other_user, receiver=request.user)
+                | Q(sender=other_user, receiver=request.user),
+                parent_message__isnull=True,
             )
             .select_related("sender", "receiver")
+            .prefetch_related("replies__sender", "replies__receiver")
             .order_by("-timestamp")
         )
 

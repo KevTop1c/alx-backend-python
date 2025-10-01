@@ -13,6 +13,20 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
+class RecursiveField(serializers.Serializer):
+    def to_representation(self, instance):
+        serializer = self.parent.parent.__class__(instance, context=self.context)
+        return serializer.data
+
+    def create(self, validated_data):
+        """Not needed, since this serializer is read-only"""
+        raise NotImplementedError("RecursiveField does not support creation")
+
+    def update(self, instance, validated_data):
+        """Not needed, since this serializer is read-only"""
+        raise NotImplementedError("RecursiveField does not support updates")
+
+
 class MessageSerializer(serializers.ModelSerializer):
     """Serializer for Message model"""
 
@@ -22,6 +36,7 @@ class MessageSerializer(serializers.ModelSerializer):
     )
     sender_details = UserSerializer(source="sender", read_only=True)
     receiver_details = UserSerializer(source="receiver", read_only=True)
+    replies = RecursiveField(many=True, read_only=True)
 
     class Meta:
         model = Message
@@ -31,6 +46,8 @@ class MessageSerializer(serializers.ModelSerializer):
             "sender_username",
             "sender_details",
             "receiver",
+            "replies",
+            "parent_message",
             "receiver_username",
             "receiver_details",
             "content",
@@ -64,7 +81,9 @@ class MessageCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ["receiver", "content"]
+        fields = ["receiver", "content", "parent_message"]
+        extra_kwargs = {"parent_message": {"required": False, "allow_null": True}}
+
 
     def validate(self, attrs):
         """Validate that sender and receiver are different"""
