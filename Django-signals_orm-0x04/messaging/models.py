@@ -5,6 +5,21 @@ from django.utils import timezone
 User = settings.AUTH_USER_MODEL
 
 
+class UnreadMessagesManager(models.Manager):
+    def for_user(self, user):
+        """
+        Return unread messages for a specific user, optimized with .only().
+        """
+        return (
+            self.get_queryset()
+            .filter(receiver=user, is_read=False)
+            .select_related("sender", "receiver")  # optimize joins
+            .only(
+                "id", "sender__username", "receiver__username", "content", "timestamp"
+            )  # load only required fields
+        )
+
+
 # pylint: disable=no-member
 class Message(models.Model):
     """Model to store messages between users"""
@@ -47,6 +62,11 @@ class Message(models.Model):
         null=True,
         blank=True,
     )
+
+    # Default manager
+    objects = models.Manager()
+    # Custom unread manager
+    unread = UnreadMessagesManager()
 
     class Meta:
         ordering = ["-timestamp"]

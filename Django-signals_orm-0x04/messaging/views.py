@@ -84,15 +84,14 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def unread(self, request):
-        """Get all unread messages for the current user"""
-        messages = (
-            Message.objects.filter(receiver=request.user, is_read=False)
-            .select_related("sender", "receiver")
-            .order_by("-timestamp")
-        )
+        """Get all unread messages for the current user using custom manager"""
+        messages = Message.unread.for_user(request.user)
 
         serializer = self.get_serializer(messages, many=True)
-        return Response({"count": messages.count(), "messages": serializer.data})
+        return Response({
+            "count": messages.count(),
+            "messages": serializer.data
+        })
 
     @action(detail=True, methods=["post"])
     def mark_as_read(self, request, pk=None):
