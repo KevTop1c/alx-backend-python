@@ -44,10 +44,10 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "django_filters",
     # Local apps
-    "chats",
+    "messaging.apps.MessagingConfig",
 ]
 
-AUTH_USER_MODEL = "chats.User"
+# AUTH_USER_MODEL = "messaging.User"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
