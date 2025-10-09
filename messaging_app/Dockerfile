@@ -17,11 +17,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
-COPY Requirements.txt .
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --upgrade pip
-RUN pip install -r Requirements.txt
+RUN pip install -r requirements.txt
 
 # Verify all imports work before copying code
 RUN python -c "import django_filters, rest_framework, corsheaders, environ, drf_yasg; print('All dependencies imported successfully')"
