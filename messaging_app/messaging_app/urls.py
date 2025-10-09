@@ -17,13 +17,18 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
+
+
+def health_check(_request):
+    """Check API endpoint status"""
+    return JsonResponse({"status": "healthy", "message": "API is running!"})
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", include("chats.urls")),
     path("api/", include("chats.urls")),
-
+    path('health/', health_check, name='health-check'),
     # Add DRF authentication URLs
-    path('api-auth/', include('rest_framework.urls')),
+    path("api/auth/", include("rest_framework.urls")),
 ]
