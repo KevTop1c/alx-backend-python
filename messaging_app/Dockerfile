@@ -29,7 +29,7 @@ RUN python -c "import django_filters, rest_framework, corsheaders, environ, drf_
 # Copy project code
 COPY . .
 
-# Expose port 8000
+# Expose port 8000 with 'docker run -p 8000:8000'
 EXPOSE 8000
 
 # Command to run the application
