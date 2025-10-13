@@ -30,7 +30,7 @@ log_error() {
 check_os() {
     case "$(uname -s)" in
         Darwin*)  OS="macOS";;
-        Linux*)   OS="linus";;
+        Linux*)   OS="Linux";;
         CYGWIN*)  OS="Windows";;
         MINGW*)   OS="Windows";;
         *)        OS="UNKNOWN";;
@@ -115,9 +115,9 @@ start_cluster() {
     fi
 
     # Start cluster with recommended settings
-    minikube start --driver=docker --memory=4096 --cpus=2
+    minikube start --driver=docker --memory=3000 --cpus=2
 
-    if [ $? eq 0 ]; then
+    if [ $? -eq 0 ]; then
         log_success "Minikube cluster started successfully"
     else
         log_error "Failed to start Minikube cluster"
@@ -132,7 +132,7 @@ verify_cluster() {
     # Check cluster info
     kubectl cluster-info
 
-    if [ $? eq 0 ]; then
+    if [ $? -eq 0 ]; then
         log_success "Cluster is running and accessible"
     else
         log_error "Cluster verification failed"
