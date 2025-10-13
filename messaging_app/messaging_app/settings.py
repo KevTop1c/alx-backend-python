@@ -93,10 +93,10 @@ WSGI_APPLICATION = "messaging_app.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.environ.get("MYSQL_DB", default="messaging_db"),
+        "NAME": os.environ.get("MYSQL_DB", default="alx_messaging_db"),
         "USER": os.environ.get("MYSQL_USER", default="messaging_user"),
         "PASSWORD": os.environ.get("MYSQL_PASSWORD", default=""),
-        "HOST": os.environ.get("MYSQL_HOST", default="localhost"),
+        "HOST": os.environ.get("MYSQL_HOST", default="mysql-service"),
         "PORT": os.environ.get("MYSQL_PORT", default=3306),
         "OPTIONS": {
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
