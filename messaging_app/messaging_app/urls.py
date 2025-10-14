@@ -17,15 +17,19 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 
 
 def health_check(_request):
     """Check API endpoint status"""
     return JsonResponse({"status": "healthy", "message": "API is running!"})
 
+def home(_request):
+    """Root page"""
+    return HttpResponse("Welcome to the Messaging App!")
 
 urlpatterns = [
+    path("", home, name="home-page"),
     path("admin/", admin.site.urls),
     path("api/", include("chats.urls")),
     path('health/', health_check, name='health-check'),
