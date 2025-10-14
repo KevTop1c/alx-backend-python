@@ -94,7 +94,7 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": os.environ.get("MYSQL_DB", default="alx_messaging_db"),
-        "USER": os.environ.get("MYSQL_USER", default="messaging_user"),
+        "USER": os.environ.get("MYSQL_USER", default="root"),
         "PASSWORD": os.environ.get("MYSQL_PASSWORD", default=""),
         "HOST": os.environ.get("MYSQL_HOST", default="mysql-service"),
         "PORT": os.environ.get("MYSQL_PORT", default=3306),
