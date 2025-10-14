@@ -1,0 +1,49 @@
+# Commands used for Nginx Ingress Controller Setup and Configuration
+
+# Step 1: Install Nginx Ingress Controller (for Minikube)
+minikube addons enable ingress
+
+# Step 2: Verify Ingress Controller Installation
+kubectl get pods -n ingress-nginx
+kubectl get ingressclass
+
+# Step 3: Apply the Ingress Configuration
+kubectl apply -f ingress.yaml
+
+# Step 4: Verify Ingress Resource was Created
+kubectl get ingress
+kubectl describe ingress django-messaging-ingress
+
+# Step 5: Get Ingress IP/URL (for Minikube)
+minikube ip
+
+# Start Minikube tunnel (run in separate terminal - keeps running)
+minikube tunnel
+
+# Step 6: Update Django ALLOWED_HOSTS to include Ingress IP
+INGRESS_IP=$(minikube ip)
+kubectl set env deployment/django-messaging-app DJANGO_ALLOWED_HOSTS="localhost,127.0.0.1,0.0.0.0,*,$INGRESS_IP"
+
+# Step 7: Monitor Ingress Logs
+kubectl logs -n ingress-nginx deployment/ingress-nginx-controller -f
+
+# Step 8: Check Ingress Status
+kubectl get ingress django-messaging-ingress --watch
+
+# Additional useful commands:
+
+# View detailed ingress information
+kubectl get ingress django-messaging-ingress -o yaml
+
+# Check service endpoints
+kubectl get endpoints django-messaging-service
+
+# Test service directly (before ingress)
+kubectl port-forward service/django-messaging-service 8080:80
+
+# Restart ingress controller if needed
+kubectl rollout restart deployment ingress-nginx-controller -n ingress-nginx
+
+# Delete and reapply ingress
+kubectl delete -f ingress.yaml
+kubectl apply -f ingress.yaml
