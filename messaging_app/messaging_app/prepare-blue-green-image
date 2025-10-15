@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# prepare-blue-green.sh: Prepare Docker images for blue-green deployment
+# This script helps you create the necessary image versions
+
+set -e
+
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+echo -e "${BLUE}=== Blue-Green Deployment Image Preparation ===${NC}\n"
+
+# Check if running in Minikube
+if ! minikube status &> /dev/null; then
+    echo -e "${YELLOW}⚠ Minikube is not running. Start it with: minikube start${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ Minikube is running${NC}\n"
+
+# Step 1: Tag current image as blue
+echo -e "${BLUE}Step 1: Tagging current image as blue version${NC}"
+if docker images | grep -q "messaging_app.*latest"; then
+    docker tag messaging_app:latest messaging_app:blue
+    echo -e "${GREEN}✓ Tagged messaging_app:latest as messaging_app:blue${NC}"
+else
+    echo -e "${YELLOW}⚠ messaging_app:latest not found. Building it now...${NC}"
+    if [ -f "Dockerfile" ]; then
+        docker build -t messaging_app:latest .
+        docker tag messaging_app:latest messaging_app:blue
+        echo -e "${GREEN}✓ Built and tagged as messaging_app:blue${NC}"
+    else
+        echo -e "${YELLOW}⚠ Dockerfile not found. Please build your image first.${NC}"
+        exit 1
+    fi
+fi
+
+# Step 2: Create green version
+echo -e "\n${BLUE}Step 2: Creating green version${NC}"
+echo "Do you want to:"
+echo "  1) Tag existing image as green (same code, for testing)"
+echo "  2) Build new image as green (with code changes)"
+read -p "Enter choice (1 or 2): " choice
+
+if [ "$choice" == "1" ]; then
+    docker tag messaging_app:latest messaging_app:v2
+    echo -e "${GREEN}✓ Tagged messaging_app:latest as messaging_app:v2 (green)${NC}"
+elif [ "$choice" == "2" ]; then
+    echo -e "${YELLOW}Make your code changes now, then press Enter to continue...${NC}"
+    read
+    docker build -t messaging_app:v2 .
+    echo -e "${GREEN}✓ Built new image as messaging_app:v2 (green)${NC}"
+else
+    echo -e "${YELLOW}Invalid choice. Exiting.${NC}"
+    exit 1
+fi
+
+# Step 3: Load images into Minikube
+echo -e "\n${BLUE}Step 3: Loading images into Minikube${NC}"
+echo "Loading messaging_app:latest..."
+minikube image load messaging_app:latest
+echo -e "${GREEN}✓ Loaded messaging_app:latest${NC}"
+
+echo "Loading messaging_app:v2..."
+minikube image load messaging_app:v2
+echo -e "${GREEN}✓ Loaded messaging_app:v2${NC}"
+
+# Step 4: Verify images in Minikube
+echo -e "\n${BLUE}Step 4: Verifying images in Minikube${NC}"
+echo -e "Images in Minikube:"
+minikube image ls | grep messaging_app
+
+# Step 5: Show summary
+echo -e "\n${GREEN}=== Preparation Complete ===${NC}\n"
+echo "Available images:"
+echo "  📦 messaging_app:latest (blue) - Current stable version"
+echo "  📦 messaging_app:v2 (green) - New version for deployment"
+echo ""
+echo "Next steps:"
+echo "  1. Make kubctl-0x02 executable: chmod +x kubctl-0x02"
+echo "  2. Run blue-green deployment: ./kubctl-0x02 deploy"
+echo "  3. Or deploy step-by-step:"
+echo "     ./kubctl-0x02 deploy-blue"
+echo "     ./kubctl-0x02 deploy-green"
+echo "     ./kubctl-0x02 switch-to-green"
+echo ""
+echo -e "${BLUE}Happy deploying! 🚀${NC}"
