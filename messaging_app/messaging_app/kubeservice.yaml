@@ -1,0 +1,79 @@
+---
+# Main service - initially points to BLUE deployment
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-messaging-service
+  labels: 
+    app: django-messasging
+spec:
+  type: ClusterIP
+  selector:
+    app: django-messaging
+    version: blue 
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+    name: http
+
+---
+# Blue service - always pointing to blue deployment
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-messaging-service-blue
+  labels: 
+    app: django-messasging
+    version: blue 
+spec:
+  type: ClusterIP
+  selector:
+    app: django-messaging
+    version: blue 
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+    name: http
+
+---
+# Green service - always pointing to green deployment
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-messaging-service-green
+  labels: 
+    app: django-messasging
+    version: green
+spec:
+  type: ClusterIP
+  selector:
+    app: django-messaging
+    version: blue 
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+    name: http
+
+---
+# Canary service - for gradual traffic shifting
+# This service can be used for canary deployments where you want
+# to send a small percentage of traffic to the green version
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-messaging-service-canary
+  labels:
+    app: django-messaging
+spec:
+  type: ClusterIP
+  selector:
+    app: django-messaging
+    # No version selector - will route to both blue and green
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+    name: http
