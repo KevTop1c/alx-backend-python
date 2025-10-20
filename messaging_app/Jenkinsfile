@@ -1,0 +1,78 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Define Python path if needed
+        PYTHON_HOME = '/usr/bin/python3'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                // Pull code from GitHub
+                git branch: 'main',
+                    credentialsId: 'github-credentials',
+                    url: 'https://github.com/KevTop1c/alx-backend-python.git'
+                
+                echo 'Code checked out successfully'
+            }
+        }
+        
+        stage('Setup Python Environment') {
+            steps {
+                script {
+                    // Install dependencies
+                    sh '''
+                        python3 -m pip install --user --upgrade pip
+                        python3 -m pip install --user pytest pytest-html
+                        
+                        # Install project dependencies if requirements.txt exists
+                        if [ -f requirements.txt ]; then
+                            python3 -m pip install --user -r requirements.txt
+                        fi
+                    '''
+                }
+            }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                script {
+                    // Run pytest with HTML report generation
+                    sh '''
+                        python3 -m pytest --html=report.html --self-contained-html --verbose
+                    '''
+                }
+            }
+        }
+        
+        stage('Generate Report') {
+            steps {
+                // Archive the test report
+                publishHTML(target: [
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: '.',
+                    reportFiles: 'report.html',
+                    reportName: 'Pytest HTML Report'
+                ])
+                
+                echo 'Test report generated and published'
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Clean up workspace
+            echo 'Pipeline execution completed'
+        }
+        success {
+            echo 'All tests passed successfully!'
+        }
+        failure {
+            echo 'Tests failed. Check the report for details.'
+        }
+    }
+}
