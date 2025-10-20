@@ -34,7 +34,7 @@ pipeline {
                         
                         # Install project dependencies if requirements.txt exists
                         if [ -f requirements.txt ]; then
-                            pip install -r requirements.txt
+                            pip3 install -r messaging_app/requirements.txt
                         fi
                     '''
                 }
