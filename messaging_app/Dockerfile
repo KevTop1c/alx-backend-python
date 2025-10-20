@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y \
 # Install Python dependencies
 COPY requirements.txt /app/
 RUN pip install --upgrade pip && \
-    pip install -r messaging_app/requirements.txt
+    pip install -r requirements.txt
 
 # Copy project files
 COPY . /app/
