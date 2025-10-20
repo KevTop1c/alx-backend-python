@@ -7,7 +7,7 @@ pipeline {
         
         // Docker Hub credentials and image details
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE = 'kevinn495/messaging-app' 
+        DOCKER_IMAGE = 'kevinn495/messaging-app'
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
     
@@ -25,92 +25,102 @@ pipeline {
         
         stage('Setup Python Environment') {
             steps {
-                script {
-                    // Create virtual environment and install dependencies
-                    sh '''
-                        # Create virtual environment
-                        python3 -m venv ${VENV_DIR}
-                        
-                        # Activate virtual environment and install dependencies
-                        . ${VENV_DIR}/bin/activate
-                        
-                        pip install --upgrade pip
-                        pip install pytest pytest-html parameterized requests
-                        
-                        # Install project dependencies if requirements.txt exists
-                        if [ -f requirements.txt ]; then
-                            pip3 install -r messaging_app/requirements.txt
-                        fi
-                    '''
+                dir('messaging_app') {
+                    script {
+                        // Create virtual environment and install dependencies
+                        sh '''
+                            # Create virtual environment
+                            python3 -m venv ${VENV_DIR}
+                            
+                            # Activate virtual environment and install dependencies
+                            . ${VENV_DIR}/bin/activate
+                            
+                            pip install --upgrade pip
+                            pip install pytest pytest-html parameterized requests
+                            
+                            # Install project dependencies if requirements.txt exists
+                            if [ -f requirements.txt ]; then
+                                pip install -r requirements.txt
+                            fi
+                        '''
+                    }
                 }
             }
         }
         
         stage('Run Tests') {
             steps {
-                script {
-                    // Activate virtual environment and run pytest only in tests directory
-                    sh '''
-                        . ${VENV_DIR}/bin/activate
-                        
-                        # Run tests only if tests directory exists
-                        if [ -d "tests" ]; then
-                            pytest tests/ --html=report.html --self-contained-html --verbose
-                        else
-                            echo "No tests directory found. Running pytest in current directory."
-                            pytest . --html=report.html --self-contained-html --verbose
-                        fi
-                    '''
+                dir('messaging_app') {
+                    script {
+                        // Activate virtual environment and run pytest only in tests directory
+                        sh '''
+                            . ${VENV_DIR}/bin/activate
+                            
+                            # Run tests only if tests directory exists
+                            if [ -d "tests" ]; then
+                                pytest tests/ --html=report.html --self-contained-html --verbose
+                            else
+                                echo "No tests directory found. Running pytest in current directory."
+                                pytest . --html=report.html --self-contained-html --verbose
+                            fi
+                        '''
+                    }
                 }
             }
         }
         
         stage('Generate Report') {
             steps {
-                // Publish HTML report using HTML Publisher Plugin
-                publishHTML(target: [
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: '.',
-                    reportFiles: 'report.html',
-                    reportName: 'Pytest HTML Report'
-                ])
-                
-                echo 'Test report generated and published'
+                dir('messaging_app') {
+                    // Publish HTML report using HTML Publisher Plugin
+                    publishHTML(target: [
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: '.',
+                        reportFiles: 'report.html',
+                        reportName: 'Pytest HTML Report'
+                    ])
+                    
+                    echo 'Test report generated and published'
+                }
             }
         }
         
         stage('Build Docker Image') {
             steps {
-                script {
-                    echo 'Building Docker image...'
-                    sh """
-                        docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .
-                        docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:latest
-                    """
-                    echo "Docker image built: ${DOCKER_IMAGE}:${IMAGE_TAG}"
+                dir('messaging_app') {
+                    script {
+                        echo 'Building Docker image...'
+                        sh """
+                            docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .
+                            docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:latest
+                        """
+                        echo "Docker image built: ${DOCKER_IMAGE}:${IMAGE_TAG}"
+                    }
                 }
             }
         }
         
         stage('Push to Docker Hub') {
             steps {
-                script {
-                    echo 'Logging in to Docker Hub...'
-                    sh """
-                        echo \$DOCKERHUB_CREDENTIALS_PSW | docker login -u \$DOCKERHUB_CREDENTIALS_USR --password-stdin
-                    """
-                    
-                    echo 'Pushing Docker image to Docker Hub...'
-                    sh """
-                        docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
-                        docker push ${DOCKER_IMAGE}:latest
-                    """
-                    
-                    echo "Docker image pushed successfully!"
-                    echo "Image: ${DOCKER_IMAGE}:${IMAGE_TAG}"
-                    echo "Latest: ${DOCKER_IMAGE}:latest"
+                dir('messaging_app') {
+                    script {
+                        echo 'Logging in to Docker Hub...'
+                        sh """
+                            echo \$DOCKERHUB_CREDENTIALS_PSW | docker login -u \$DOCKERHUB_CREDENTIALS_USR --password-stdin
+                        """
+                        
+                        echo 'Pushing Docker image to Docker Hub...'
+                        sh """
+                            docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
+                            docker push ${DOCKER_IMAGE}:latest
+                        """
+                        
+                        echo "Docker image pushed successfully!"
+                        echo "Image: ${DOCKER_IMAGE}:${IMAGE_TAG}"
+                        echo "Latest: ${DOCKER_IMAGE}:latest"
+                    }
                 }
             }
         }
