@@ -17,7 +17,7 @@ pipeline {
                 // Pull code from GitHub
                 git branch: 'main',
                     credentialsId: 'github-credentials',
-                    url: 'https://github.com/YOUR_USERNAME/YOUR_REPO.git'
+                    url: 'https://github.com/KevTop1c/alx-backend-python.git'
                 
                 echo 'Code checked out successfully'
             }
