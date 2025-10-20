@@ -1,31 +1,36 @@
 pipeline {
     agent any
     
-    tools {
-        python "Python3"
-    }
-    
     environment {
-        GITHUB_CREDENTIALS = credentials('github-credentials')
+        VENV_PATH = "${WORKSPACE}/venv"
     }
     
     stages {
         stage('Checkout') {
             steps {
-                checkout scmGit(
-                    branches: [[name: '*/main']],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/KevTop1c/alx-backend-python.git',
-                        credentialsId: 'github-credentials'
-                    ]]
-                )
+                git credentialsId: 'github-credentials', 
+                    url: 'https://github.com/KevTop1c/alx-backend-python.git', 
+                    branch: 'main'
+            }
+        }
+        
+        stage('Setup Python Environment') {
+            steps {
+                sh '''
+                    # Check Python availability
+                    python3 --version || python --version
+                    # Create virtual environment
+                    python3 -m venv $VENV_PATH || python -m venv $VENV_PATH
+                    . $VENV_PATH/bin/activate
+                    pip install --upgrade pip
+                '''
             }
         }
         
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    python -m pip install --upgrade pip
+                    . $VENV_PATH/bin/activate
                     pip install -r requirements.txt
                     pip install pytest pytest-html
                 '''
@@ -34,18 +39,28 @@ pipeline {
         
         stage('Run Tests') {
             steps {
-                sh 'python -m pytest tests/ --html=test-report.html --self-contained-html'
+                sh '''
+                    . $VENV_PATH/bin/activate
+                    python -m pytest tests/ -v --html=test-report.html --self-contained-html
+                    
+                    # Also generate JUnit XML report for better Jenkins integration
+                    python -m pytest tests/ -v --junitxml=junit-report.xml
+                '''
             }
             post {
                 always {
+                    // Publish HTML report
                     publishHTML([
-                        allowMissing: false,
+                        allowMissing: true,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
                         reportDir: '.',
                         reportFiles: 'test-report.html',
-                        reportName: 'Pytest Report'
+                        reportName: 'Pytest HTML Report'
                     ])
+                    
+                    // Publish JUnit test results
+                    junit 'junit-report.xml'
                 }
             }
         }
@@ -53,13 +68,13 @@ pipeline {
     
     post {
         always {
-            echo 'Pipeline completed - check test reports'
+            echo "Build completed - ${currentBuild.result}"
         }
         success {
-            echo 'All tests passed!'
+            echo 'Pipeline executed successfully!'
         }
         failure {
-            echo 'Pipeline failed! Check the test reports.'
+            echo 'Pipeline execution failed!'
         }
     }
 }
