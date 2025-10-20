@@ -2,79 +2,84 @@ pipeline {
     agent any
     
     environment {
-        VENV_PATH = "${WORKSPACE}/venv"
+        // Virtual environment will be created in the workspace
+        VENV_DIR = 'venv'
     }
     
     stages {
         stage('Checkout') {
             steps {
-                git credentialsId: 'github-credentials', 
-                    url: 'https://github.com/KevTop1c/alx-backend-python.git', 
-                    branch: 'main'
+                // Pull code from GitHub
+                git branch: 'main',
+                    credentialsId: 'github-credentials',
+                    url: 'https://github.com/YOUR_USERNAME/YOUR_REPO.git'
+                
+                echo 'Code checked out successfully'
             }
         }
         
         stage('Setup Python Environment') {
             steps {
-                sh '''
-                    # Check Python availability
-                    python3 --version || python --version
-                    # Create virtual environment
-                    python3 -m venv $VENV_PATH || python -m venv $VENV_PATH
-                    . $VENV_PATH/bin/activate
-                    pip install --upgrade pip
-                '''
-            }
-        }
-        
-        stage('Install Dependencies') {
-            steps {
-                sh '''
-                    . $VENV_PATH/bin/activate
-                    pip install -r requirements.txt
-                    pip install pytest pytest-html
-                '''
+                script {
+                    // Create virtual environment and install dependencies
+                    sh '''
+                        # Create virtual environment
+                        python3 -m venv ${VENV_DIR}
+                        
+                        # Activate virtual environment and install dependencies
+                        . ${VENV_DIR}/bin/activate
+                        
+                        pip install --upgrade pip
+                        pip install pytest pytest-html
+                        
+                        # Install project dependencies if requirements.txt exists
+                        if [ -f requirements.txt ]; then
+                            pip install -r requirements.txt
+                        fi
+                    '''
+                }
             }
         }
         
         stage('Run Tests') {
             steps {
-                sh '''
-                    . $VENV_PATH/bin/activate
-                    python -m pytest tests/ -v --html=test-report.html --self-contained-html
-                    
-                    # Also generate JUnit XML report for better Jenkins integration
-                    python -m pytest tests/ -v --junitxml=junit-report.xml
-                '''
-            }
-            post {
-                always {
-                    // Publish HTML report
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: '.',
-                        reportFiles: 'test-report.html',
-                        reportName: 'Pytest HTML Report'
-                    ])
-                    
-                    // Publish JUnit test results
-                    junit 'junit-report.xml'
+                script {
+                    // Activate virtual environment and run pytest
+                    sh '''
+                        . ${VENV_DIR}/bin/activate
+                        pytest --html=report.html --self-contained-html --verbose
+                    '''
                 }
+            }
+        }
+        
+        stage('Generate Report') {
+            steps {
+                // Archive the test report
+                publishHTML(target: [
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: '.',
+                    reportFiles: 'report.html',
+                    reportName: 'Pytest HTML Report'
+                ])
+                
+                echo 'Test report generated and published'
             }
         }
     }
     
     post {
         always {
-            echo "Build completed - ${currentBuild.result}"
+            // Clean up workspace
+            echo 'Pipeline execution completed'
         }
         success {
-            echo 'Pipeline executed successfully!'
+            echo 'All tests passed successfully!'
         }
         failure {
-            echo 'Pipeline execution failed!'
+            echo 'Tests failed. Check the report for details.'
         }
     }
 }
