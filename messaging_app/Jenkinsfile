@@ -30,7 +30,7 @@ pipeline {
                         . ${VENV_DIR}/bin/activate
                         
                         pip install --upgrade pip
-                        pip install pytest pytest-html
+                        pip install pytest pytest-html parameterized
                         
                         # Install project dependencies if requirements.txt exists
                         if [ -f requirements.txt ]; then
@@ -44,10 +44,17 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    // Activate virtual environment and run pytest
+                    // Activate virtual environment and run pytest only in tests directory
                     sh '''
                         . ${VENV_DIR}/bin/activate
-                        pytest --html=report.html --self-contained-html --verbose
+                        
+                        # Run tests only if tests directory exists
+                        if [ -d "tests" ]; then
+                            pytest tests/ --html=report.html --self-contained-html --verbose
+                        else
+                            echo "No tests directory found. Running pytest in current directory."
+                            pytest . --html=report.html --self-contained-html --verbose
+                        fi
                     '''
                 }
             }
