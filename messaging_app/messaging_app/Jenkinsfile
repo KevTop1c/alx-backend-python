@@ -4,6 +4,11 @@ pipeline {
     environment {
         // Virtual environment will be created in the workspace
         VENV_DIR = 'venv'
+        
+        // Docker Hub credentials and image details
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        DOCKER_IMAGE = 'kevinn495/messaging-app' 
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
     
     stages {
@@ -12,7 +17,7 @@ pipeline {
                 // Pull code from GitHub
                 git branch: 'main',
                     credentialsId: 'github-credentials',
-                    url: 'https://github.com/KevTop1c/alx-backend-python.git'
+                    url: 'https://github.com/YOUR_USERNAME/YOUR_REPO.git'
                 
                 echo 'Code checked out successfully'
             }
@@ -62,7 +67,7 @@ pipeline {
         
         stage('Generate Report') {
             steps {
-                // Archive the test report
+                // Publish HTML report using HTML Publisher Plugin
                 publishHTML(target: [
                     allowMissing: false,
                     alwaysLinkToLastBuild: true,
@@ -75,18 +80,65 @@ pipeline {
                 echo 'Test report generated and published'
             }
         }
+        
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    echo 'Building Docker image...'
+                    sh """
+                        docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .
+                        docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:latest
+                    """
+                    echo "Docker image built: ${DOCKER_IMAGE}:${IMAGE_TAG}"
+                }
+            }
+        }
+        
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    echo 'Logging in to Docker Hub...'
+                    sh """
+                        echo \$DOCKERHUB_CREDENTIALS_PSW | docker login -u \$DOCKERHUB_CREDENTIALS_USR --password-stdin
+                    """
+                    
+                    echo 'Pushing Docker image to Docker Hub...'
+                    sh """
+                        docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
+                        docker push ${DOCKER_IMAGE}:latest
+                    """
+                    
+                    echo "Docker image pushed successfully!"
+                    echo "Image: ${DOCKER_IMAGE}:${IMAGE_TAG}"
+                    echo "Latest: ${DOCKER_IMAGE}:latest"
+                }
+            }
+        }
+        
+        stage('Cleanup') {
+            steps {
+                script {
+                    echo 'Cleaning up local Docker images...'
+                    sh """
+                        docker logout
+                        docker rmi ${DOCKER_IMAGE}:${IMAGE_TAG} || true
+                        docker rmi ${DOCKER_IMAGE}:latest || true
+                    """
+                }
+            }
+        }
     }
     
     post {
         always {
-            // Clean up workspace
             echo 'Pipeline execution completed'
         }
         success {
             echo 'All tests passed successfully!'
+            echo "Docker image available at: ${DOCKER_IMAGE}:${IMAGE_TAG}"
         }
         failure {
-            echo 'Tests failed. Check the report for details.'
+            echo 'Pipeline failed. Check the logs for details.'
         }
     }
 }
