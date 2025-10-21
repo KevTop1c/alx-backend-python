@@ -9,8 +9,8 @@ from django.conf import settings
 # Configure Django settings for pytest
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "messaging_app.settings")
 
-
-def pytest_configure(_config):
+# pylint: disable=unused-argument
+def pytest_configure(config):
     """Configure Django for pytest"""
     if not settings.configured:
         settings.configure(
