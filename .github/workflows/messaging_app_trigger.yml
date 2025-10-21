@@ -13,4 +13,4 @@ on:
 
 jobs:
   run-messaging-app-ci:
-    uses: ./messaging_app/.github/workflows/ci.yml
+    uses: KevTop1c/alx-backend-python/messaging_app/.github/workflows/ci.yml@main
