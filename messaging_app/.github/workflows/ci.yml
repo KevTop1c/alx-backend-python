@@ -1,11 +1,7 @@
 name: Django CI/CD Pipeline
 
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
-
+   workflow_call:
 jobs:
   test:
     name: Run Tests
@@ -15,10 +11,10 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: test_messaging_db
+          MYSQL_ROOT_PASSWORD: MySQL@001
+          MYSQL_DATABASE: test_alx_messaging_db
           MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          MYSQL_PASSWORD: MySQL@001
         ports:
           - 3306:3306
         options: >-
@@ -44,7 +40,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('messaging_app/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -85,47 +81,54 @@ jobs:
       - name: Set up environment variables
         working-directory: ./messaging_app
         run: |
-          echo "DEBUG=False" >> $GITHUB_ENV
-          echo "SECRET_KEY=test-secret-key-for-github-actions" >> $GITHUB_ENV
-          echo "DB_NAME=test_messaging_db" >> $GITHUB_ENV
-          echo "DB_USER=test_user" >> $GITHUB_ENV
-          echo "DB_PASSWORD=test_password" >> $GITHUB_ENV
-          echo "DB_HOST=127.0.0.1" >> $GITHUB_ENV
-          echo "DB_PORT=3306" >> $GITHUB_ENV
+          echo "DJANGO_DEBUG=True" >> $GITHUB_ENV
+          echo "DJANGO_SECRET_KEY=test-secret-key-for-github-actions" >> $GITHUB_ENV
+          echo "MYSQL_DB=test_messaging_db" >> $GITHUB_ENV
+          echo "MYSQL_USER=test_user" >> $GITHUB_ENV
+          echo "MYSQL_PASSWORD=test_password" >> $GITHUB_ENV
+          echo "MYSQL_HOST=127.0.0.1" >> $GITHUB_ENV
+          echo "MYSQL_PORT=3306" >> $GITHUB_ENV
+          echo "DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1" >> $GITHUB_ENV
 
       - name: Run Django system checks
         working-directory: ./messaging_app
         env:
-          DB_NAME: test_messaging_db
-          DB_USER: test_user
-          DB_PASSWORD: test_password
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          SECRET_KEY: test-secret-key-for-github-actions
+          MYSQL_DB: test_alx_messaging_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: MySQL
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          DJANGO_SECRET_KEY: test-secret-key-for-github-actions
+          DJANGO_DEBUG: True
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
         run: |
           python manage.py check
 
       - name: Run migrations
         working-directory: ./messaging_app
         env:
-          DB_NAME: test_messaging_db
-          DB_USER: test_user
-          DB_PASSWORD: test_password
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          SECRET_KEY: test-secret-key-for-github-actions
+          MYSQL_DB: test_alx_messaging_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: MySQL
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          DJANGO_SECRET_KEY: test-secret-key-for-github-actions
+          DJANGO_DEBUG: True
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
         run: |
           python manage.py migrate --noinput
 
       - name: Run tests with pytest
         working-directory: ./messaging_app
         env:
-          DB_NAME: test_messaging_db
-          DB_USER: test_user
-          DB_PASSWORD: test_password
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          SECRET_KEY: test-secret-key-for-github-actions
+          MYSQL_DB: test_alx_messaging_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: MySQL
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          DJANGO_SECRET_KEY: test-secret-key-for-github-actions
+          DJANGO_DEBUG: True
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
         run: |
           # Run pytest if tests directory exists
           if [ -d "tests" ] || find . -name "test_*.py" -o -name "*_test.py" | grep -q .; then
