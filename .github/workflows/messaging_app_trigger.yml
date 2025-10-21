@@ -1,0 +1,16 @@
+name: Trigger Messaging App CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "messaging_app/**"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "messaging_app/**"
+  workflow_dispatch:
+
+jobs:
+  run-messaging-app-ci:
+    uses: ./messaging_app/.github/workflows/ci.yml
