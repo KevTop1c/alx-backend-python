@@ -3,41 +3,11 @@ Sample test file for the messaging app
 """
 
 import pytest
-from django.test import TestCase
-from django.contrib.auth.models import User
 
 
-class SampleTestCase(TestCase):
-    """Sample test case to verify testing setup works"""
-
-    def test_basic_assertion(self):
-        """Test that basic assertions work"""
-        self.assertEqual(1 + 1, 2)
-        self.assertTrue(True)
-        self.assertFalse(False)
-
-    def test_database_access(self):
-        """Test that database is accessible"""
-        # Create a test user
-        user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
-        )
-
-        # Verify user was created
-        self.assertEqual(User.objects.count(), 1)
-        self.assertEqual(user.username, "testuser")
-        self.assertEqual(user.email, "test@example.com")
-
-    def test_user_authentication(self):
-        """Test user authentication"""
-        # Create a user
-        user = User.objects.create_user(username="authuser", password="authpass123")
-
-        # Test authentication
-        self.assertTrue(user.check_password("authpass123"))
-        self.assertFalse(user.check_password("wrongpassword"))
-
-
+# pylint: disable=invalid-name
+# pylint: disable=import-outside-toplevel
+# Pytest-style tests
 @pytest.mark.unit
 def test_python_basics():
     """Test basic Python functionality"""
@@ -53,3 +23,54 @@ def test_string_operations():
     assert test_string.lower() == "github actions"
     assert len(test_string) == 14
     assert "Actions" in test_string
+
+
+@pytest.mark.django_db(transaction=True)
+def test_user_creation():
+    """Test that we can create a user in the database"""
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    user = User.objects.create_user(
+        email="testuser@example.com",
+        password="testpass123",
+        phone_number="+1234567890",
+        first_name="Test",
+        last_name="User",
+    )
+
+    assert User.objects.count() == 1
+    assert user.email == "testuser@example.com"
+    assert user.first_name == "Test"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_user_authentication():
+    """Test user authentication"""
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    user = User.objects.create_user(
+        email="authuser@example.com",
+        password="authpass123",
+        phone_number="+0987654321",
+        first_name="Auth",
+        last_name="User",
+    )
+
+    assert user.check_password("authpass123")
+    assert not user.check_password("wrongpassword")
+
+
+@pytest.mark.django_db(transaction=True)
+def test_sample_user_fixture(sample_user):
+    """Test using the sample_user fixture"""
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    assert sample_user.email == "test@example.com"
+    assert sample_user.first_name == "Test"
+    assert User.objects.count() == 1
