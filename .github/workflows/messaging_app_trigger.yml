@@ -23,3 +23,19 @@ jobs:
           echo "Running workflow from messaging_app/.github/workflows/ci.yml"
           cd messaging_app
           gh workflow run .github/workflows/ci.yml --ref "${GITHUB_REF##*/}" || echo "Simulating workflow trigger"
+
+  trigger-deploy:
+    name: Trigger Deployment Workflow
+    runs-on: ubuntu-latest
+    needs: trigger-messaging-app-ci
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Trigger Deployment Workflow in messaging_app
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Triggering messaging_app/.github/workflows/dep.yml"
+          gh workflow run "messaging_app/.github/workflows/dep.yml" \
+            --ref "${GITHUB_REF_NAME}" || echo "Simulating deployment workflow trigger"
