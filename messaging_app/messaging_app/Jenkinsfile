@@ -35,12 +35,12 @@ pipeline {
                             # Activate virtual environment and install dependencies
                             . ${VENV_DIR}/bin/activate
                             
-                            pip install --upgrade pip
-                            pip install pytest pytest-html parameterized requests
+                            pip3 install --upgrade pip
+                            pip3 install pytest pytest-html parameterized requests
                             
                             # Install project dependencies if requirements.txt exists
                             if [ -f requirements.txt ]; then
-                                pip install -r requirements.txt
+                                pip3 install -r requirements.txt
                             fi
                         '''
                     }
